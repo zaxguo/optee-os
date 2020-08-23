@@ -17,14 +17,18 @@ static TEE_Result secstor_ta_open(const TEE_UUID *uuid,
 	const struct tee_tadb_property *prop;
 
 	res = tee_tadb_ta_open(uuid, &ta);
-	if (res)
+	if (res) {
+		DMSG("lwg:%s:%d: res = %x\n", __func__, __LINE__, res);
 		return res;
+	}
 	prop = tee_tadb_ta_get_property(ta);
 
 	l = prop->custom_size;
 	res = tee_tadb_ta_read(ta, NULL, &l);
-	if (res)
+	if (res) {
+		DMSG("lwg:%s:%d: res = %x\n", __func__, __LINE__, res);
 		goto err;
+	}
 	if (l != prop->custom_size) {
 		res = TEE_ERROR_CORRUPT_OBJECT;
 		goto err;

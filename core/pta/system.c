@@ -256,6 +256,7 @@ static TEE_Result system_open_ta_binary(struct system_ctx *ctx,
 		DMSG("Lookup user TA ELF %pUl (%s)",
 		     (void *)uuid, binh->op->description);
 
+		DMSG("lwg: open = %p", binh->op->open);
 		res = binh->op->open(uuid, &binh->h);
 		DMSG("res=0x%x", res);
 		if (res != TEE_ERROR_ITEM_NOT_FOUND &&

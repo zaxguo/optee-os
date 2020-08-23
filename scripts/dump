@@ -1,0 +1,65 @@
+D/TC:? 0 tee_ta_init_pseudo_ta_session:284 Lookup pseudo TA deadbeef-2450-11e4-abe2-0002a5d5cb
+D/TC:? 0 load_ldelf:703 ldelf load address 0x40006000
+D/LD:  ldelf:134 Loading TA deadbeef-2450-11e4-abe2-0002a5d5c51b
+D/TC:? 0 tee_ta_init_session_with_context:573 Re-open TA 3a2f8978-5dc0-11e8-9c2d-fa7ae01bbebc
+D/TC:? 0 system_open_ta_binary:257 Lookup user TA ELF deadbeef-2450-11e4-abe2-0002a5d5c51b (S)
+D/TC:? 0 system_open_ta_binary:259 lwg: open = 0x101055e8
+D/TC:? 0 secstor_ta_open:21 lwg:secstor_ta_open:21: res = ffff0008
+D/TC:? 0 system_open_ta_binary:261 res=0xffff0008
+D/TC:? 0 system_open_ta_binary:257 Lookup user TA ELF deadbeef-2450-11e4-abe2-0002a5d5c51b (R)
+D/TC:? 0 system_open_ta_binary:259 lwg: open = 0x10105124
+D/TC:? 0 system_open_ta_binary:261 res=0x0
+D/LD:  ldelf:169 ELF (deadbeef-2450-11e4-abe2-0002a5d5c51b) at 0x40088000
+D/TC:? 0 tee_ta_close_session:499 csess 0x101776e0 id 1
+D/TC:? 0 tee_ta_close_session:518 Destroy session
+D/TC:0 0 abort_handler:524 [abort] abort in User mode (TA will panic)
+E/TC:? 0 
+E/TC:? 0 User TA data-abort at address 0x10 (translation fault)
+E/TC:? 0  esr 0x92000045  ttbr0 0x200001018f000   ttbr1 0x00000000   cidr 0x0
+E/TC:? 0  cpu #0          cpsr 0x20000100
+E/TC:? 0  x0  0000000000000010 x1  0000000000000000
+E/TC:? 0  x2  00000000400cb953 x3  0000000000000000
+E/TC:? 0  x4  00000000400cd490 x5  0000000000000080
+E/TC:? 0  x6  00000000400d3ce0 x7  0000000000000020
+E/TC:? 0  x8  0000000040013e20 x9  00000000400cbe24
+E/TC:? 0  x10 0000000000000000 x11 0000000000000000
+E/TC:? 0  x12 0000000000000000 x13 0000000040013c38
+E/TC:? 0  x14 0000000000000000 x15 0000000000000000
+E/TC:? 0  x16 0000000000000000 x17 0000000000000000
+E/TC:? 0  x18 0000000000000000 x19 0000000000000001
+E/TC:? 0  x20 0000000040094e2c x21 00000000400d3ce0
+E/TC:? 0  x22 00000000400d7ce0 x23 0000000000000001
+E/TC:? 0  x24 0000000000000008 x25 00000000400d3ce0
+E/TC:? 0  x26 0000000040013b90 x27 0000000000000000
+E/TC:? 0  x28 0000000000000000 x29 00000000400138a0
+E/TC:? 0  x30 0000000040098ac0 elr 0000000040098aec
+E/TC:? 0  sp_el0 00000000400138a0
+E/LD:  Status of TA deadbeef-2450-11e4-abe2-0002a5d5c51b
+E/LD:   arch: aarch64
+E/LD:  region  0: va 0x40004000 pa 0x10800000 size 0x002000 flags rw-s (ldelf)
+E/LD:  region  1: va 0x40006000 pa 0x10802000 size 0x008000 flags r-xs (ldelf)
+E/LD:  region  2: va 0x4000e000 pa 0x1080a000 size 0x001000 flags rw-s (ldelf)
+E/LD:  region  3: va 0x4000f000 pa 0x1080b000 size 0x003000 flags rw-s (ldelf)
+E/LD:  region  4: va 0x40012000 pa 0x1080e000 size 0x001000 flags r--s
+E/LD:  region  5: va 0x40013000 pa 0x10860000 size 0x001000 flags rw-s (stack)
+E/LD:  region  6: va 0x40088000 pa 0x00001000 size 0x045000 flags r-xs [0]
+E/LD:  region  7: va 0x400cd000 pa 0x00046000 size 0x00c000 flags rw-s [0]
+E/LD:   [0] deadbeef-2450-11e4-abe2-0002a5d5c51b @ 0x40088000
+E/LD:  Call stack:
+E/LD:   0x0000000040098aec
+E/LD:   0x00000000400a25b0
+E/LD:   0x00000000400a52a0
+E/LD:   0x00000000400a5450
+E/LD:   0x00000000400a6490
+E/LD:   0x00000000400a698c
+E/LD:   0x00000000400944e0
+E/LD:   0x00000000400abcb4
+E/LD:   0x00000000400a6b90
+E/LD:   0xfffffffffffffffc
+D/TC:? 0 user_ta_enter:167 tee_user_ta_enter: TA panicked with code 0xdeadbeef
+D/TC:? 0 tee_ta_close_session:499 csess 0x10177ee0 id 1
+D/TC:? 0 tee_ta_close_session:518 Destroy session
+D/TC:? 0 destroy_context:298 Destroy TA ctx (0x10177e80)
+E/TC:? 0 tee_ta_open_session:728 Failed. Return error 0xffff3024
+optee_example_cv: TEEC_Opensession failed with code 0xffff3024 origin 0x3
+

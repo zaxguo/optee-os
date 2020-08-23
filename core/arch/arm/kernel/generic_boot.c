@@ -1169,6 +1169,7 @@ void __weak paged_init_primary(unsigned long fdt)
 	update_external_dt();
 	configure_console_from_dt();
 
+	IMSG("lwg:%s:%d: landed in our version of OPTEE!\n", __func__, __LINE__);
 	IMSG("OP-TEE version: %s", core_v_str);
 #ifdef CFG_CORE_ASLR
 	DMSG("Executing at offset %#lx with virtual load address %#"PRIxVA,

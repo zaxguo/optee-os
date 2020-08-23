@@ -144,8 +144,10 @@ static TEE_Result ree_fs_ta_open(const TEE_UUID *uuid,
 
 	/* Request TA from tee-supplicant */
 	res = rpc_load(uuid, &ta, &ta_size, &mobj);
-	if (res != TEE_SUCCESS)
+	if (res != TEE_SUCCESS) {
+		DMSG("lwg:%s:%d: res = %x\n", __func__, __LINE__, res);
 		goto error;
+	}
 
 	/* Make secure copy of signed header */
 	shdr = shdr_alloc_and_copy(ta, ta_size);
@@ -156,8 +158,9 @@ static TEE_Result ree_fs_ta_open(const TEE_UUID *uuid,
 
 	/* Validate header signature */
 	res = shdr_verify_signature(shdr);
-	if (res != TEE_SUCCESS)
+	if (res != TEE_SUCCESS) {
 		goto error_free_payload;
+	}
 	if (shdr->img_type != SHDR_TA && shdr->img_type != SHDR_BOOTSTRAP_TA &&
 	    shdr->img_type != SHDR_ENCRYPTED_TA) {
 		res = TEE_ERROR_SECURITY;
