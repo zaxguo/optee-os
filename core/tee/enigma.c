@@ -33,7 +33,8 @@ static int alloc_block(int dev_id, btt_e vblock, btt_e *pblock) {
 }
 
 /* Given a SDB dev id and its virtual block, return a phyiscal disk block */
-/* This is the core BTT logic */
+/* This is the core BTT logic
+ * TODO: move this to normal world */
 int look_up_block(int dev_id, btt_e vblock, btt_e *pblock) {
 	if (!has_enigma_cb()) {
 		return -1;

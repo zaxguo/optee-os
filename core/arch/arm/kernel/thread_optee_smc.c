@@ -26,8 +26,14 @@
 static bool thread_prealloc_rpc_cache;
 static unsigned int thread_rpc_pnum;
 
+
+void lwg_std_entry(void) {
+	EMSG("entered...\n");
+}
+
 void thread_handle_fast_smc(struct thread_smc_args *args)
 {
+	EMSG("entered...\n");
 	thread_check_canaries();
 
 #ifdef CFG_VIRTUALIZATION
@@ -48,12 +54,21 @@ out:
 	assert(thread_get_exceptions() == THREAD_EXCP_ALL);
 }
 
+static void unpack_smc_args(uint32_t a0, uint32_t a1, uint32_t a2,
+							uint32_t a3, uint32_t a4, uint32_t a5,
+						   	uint32_t a6 __unused, uint32_t a7 __maybe_unused) {
+	EMSG("lwg: a0[%x], a1[%x], a2[%x], a3[%x], a4[%x]...\n",
+			a0, a1, a2, a3, a4);
+}
+
 uint32_t thread_handle_std_smc(uint32_t a0, uint32_t a1, uint32_t a2,
 			       uint32_t a3, uint32_t a4, uint32_t a5,
 			       uint32_t a6 __unused, uint32_t a7 __maybe_unused)
 {
 	uint32_t rv = OPTEE_SMC_RETURN_OK;
 
+	EMSG("entered...\n");
+	unpack_smc_args(a0, a1, a2, a3, a4, a5, a6, a7);
 	thread_check_canaries();
 
 #ifdef CFG_VIRTUALIZATION
@@ -159,6 +174,7 @@ static struct mobj *map_cmd_buffer(paddr_t pargi __unused,
 static uint32_t std_smc_entry(uint32_t a0, uint32_t a1, uint32_t a2,
 			      uint32_t a3 __unused)
 {
+	EMSG("lwg:%s:%d:entered..\n", __func__, __LINE__);
 	paddr_t parg = 0;
 	struct optee_msg_arg *arg = NULL;
 	uint32_t num_params = 0;
@@ -206,6 +222,7 @@ uint32_t __weak __thread_std_smc_entry(uint32_t a0, uint32_t a1, uint32_t a2,
 				       uint32_t a3)
 {
 	uint32_t rv = 0;
+	EMSG("lwg:%s:%d:entered..\n", __func__, __LINE__);
 
 #ifdef CFG_VIRTUALIZATION
 	virt_on_stdcall();
