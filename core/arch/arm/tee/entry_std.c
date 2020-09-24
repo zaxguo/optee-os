@@ -477,6 +477,10 @@ uint32_t __weak tee_entry_std(struct optee_msg_arg *arg, uint32_t num_params)
 	return __tee_entry_std(arg, num_params);
 }
 
+uint32_t enigma_entry(uint32_t op, uint32_t blk, uint32_t priv) {
+	return blk;
+}
+
 /*
  * If tee_entry_std() is overridden, it's still supposed to call this
  * function.

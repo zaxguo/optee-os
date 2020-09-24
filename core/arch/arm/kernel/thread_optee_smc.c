@@ -14,6 +14,7 @@
 #include <optee_msg.h>
 #include <optee_rpc_cmd.h>
 #include <sm/optee_smc.h>
+#include <sm/enigma_smc.h>
 #include <sm/sm.h>
 #include <string.h>
 #include <tee/entry_std.h>
@@ -67,8 +68,7 @@ uint32_t thread_handle_std_smc(uint32_t a0, uint32_t a1, uint32_t a2,
 {
 	uint32_t rv = OPTEE_SMC_RETURN_OK;
 
-	EMSG("entered...\n");
-	unpack_smc_args(a0, a1, a2, a3, a4, a5, a6, a7);
+	/*unpack_smc_args(a0, a1, a2, a3, a4, a5, a6, a7);*/
 	thread_check_canaries();
 
 #ifdef CFG_VIRTUALIZATION
@@ -174,12 +174,18 @@ static struct mobj *map_cmd_buffer(paddr_t pargi __unused,
 static uint32_t std_smc_entry(uint32_t a0, uint32_t a1, uint32_t a2,
 			      uint32_t a3 __unused)
 {
-	EMSG("lwg:%s:%d:entered..\n", __func__, __LINE__);
 	paddr_t parg = 0;
 	struct optee_msg_arg *arg = NULL;
 	uint32_t num_params = 0;
 	struct mobj *mobj = NULL;
 	uint32_t rv = 0;
+
+	/* handle smc calls from enigma, we pass all our args in registers */
+	if (a0 == ENIGMA_SMC_CALL) {
+		EMSG("caught enigma smc call! -- a0 = %x, a1 = %x, a2 = %x\n", a0, a1, a2);
+		rv = enigma_entry(a1, a2, a3);
+		return rv;
+	}
 
 	if (a0 != OPTEE_SMC_CALL_WITH_ARG) {
 		EMSG("Unknown SMC 0x%"PRIx32, a0);
@@ -209,6 +215,7 @@ static uint32_t std_smc_entry(uint32_t a0, uint32_t a1, uint32_t a2,
 	rv = tee_entry_std(arg, num_params);
 	mobj_put(mobj);
 
+
 	return rv;
 }
 
@@ -222,7 +229,6 @@ uint32_t __weak __thread_std_smc_entry(uint32_t a0, uint32_t a1, uint32_t a2,
 				       uint32_t a3)
 {
 	uint32_t rv = 0;
-	EMSG("lwg:%s:%d:entered..\n", __func__, __LINE__);
 
 #ifdef CFG_VIRTUALIZATION
 	virt_on_stdcall();

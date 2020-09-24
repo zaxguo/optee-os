@@ -16,6 +16,7 @@
  *
  * These functions are called in a normal thread context.
  */
+uint32_t enigma_entry(uint32_t op, uint32_t blk, uint32_t priv);
 uint32_t tee_entry_std(struct optee_msg_arg *arg, uint32_t num_params);
 uint32_t __tee_entry_std(struct optee_msg_arg *arg, uint32_t num_params);
 void lwg_std_entry(void);
