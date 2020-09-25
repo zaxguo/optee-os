@@ -17,6 +17,7 @@
 #include <trace.h>
 
 #include <platform_config.h>
+#include <tee/enigma.h>
 
 
 #define TEE_MON_MAX_NUM_ARGS    8
@@ -68,6 +69,10 @@ TEE_Result __weak init_teecore(void)
 	 * paging.
 	 */
 	fobj_generate_authenc_key();
+
+
+	/* enigma init */
+	init_enigma_cb();
 
 	IMSG("Initialized");
 	return TEE_SUCCESS;

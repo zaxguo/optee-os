@@ -23,6 +23,9 @@
 #include <tee/tee_cryp_utl.h>
 #include <tee/uuid.h>
 #include <util.h>
+/* enigma headers */
+#include <sm/enigma_smc.h>
+#include <tee/enigma.h>
 
 #define SHM_CACHE_ATTRS	\
 	(uint32_t)(core_mmu_is_shm_cached() ?  OPTEE_SMC_SHM_CACHED : 0)
@@ -478,6 +481,18 @@ uint32_t __weak tee_entry_std(struct optee_msg_arg *arg, uint32_t num_params)
 }
 
 uint32_t enigma_entry(uint32_t op, uint32_t blk, uint32_t priv) {
+	int ret;
+	btt_e pblk = NULL_BLK;
+	switch (op) {
+		case ENIGMA_WR:
+			ret = look_up_block(0, blk, &pblk);
+			EMSG("alloc:[%x] -> [%x]\n", blk, pblk);
+			if (blk == NULL_BLK) {
+			}
+			break;
+		default:
+			break;
+	}
 	return blk;
 }
 
