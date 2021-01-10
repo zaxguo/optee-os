@@ -480,20 +480,24 @@ uint32_t __weak tee_entry_std(struct optee_msg_arg *arg, uint32_t num_params)
 	return __tee_entry_std(arg, num_params);
 }
 
-uint32_t enigma_entry(uint32_t op, uint32_t blk, uint32_t priv) {
+uint32_t enigma_entry(uint32_t op, uint32_t blk, uint32_t dev_id) {
 	int ret;
 	btt_e pblk = NULL_BLK;
 	switch (op) {
 		case ENIGMA_WR:
-			ret = look_up_block(0, blk, &pblk);
+			ret = look_up_block(dev_id, blk, &pblk);
 			EMSG("alloc:[%x] -> [%x]\n", blk, pblk);
-			if (blk == NULL_BLK) {
+			if (pblk == NULL_BLK) {
+				EMSG("fail to alloc block [%x]\n", pblk);
 			}
 			break;
+		case ENIGMA_RD:
+			/* TODO: we donot have encryption yet */
+			pblk = (blk == NULL_BLK) ? 0 : blk;
 		default:
 			break;
 	}
-	return blk;
+	return pblk;
 }
 
 /*

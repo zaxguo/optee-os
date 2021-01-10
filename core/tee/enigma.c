@@ -4,6 +4,10 @@
 
 /* enigma control block, which stores btt, cipher, etc. */
 struct enigma_cb enigma_cb;
+int actual_id = 5;
+uint64_t fs_size;
+
+
 
 static int __look_up_block(btt_e *btt, btt_e vblock) {
 	return 0;
@@ -26,9 +30,11 @@ static inline int pblk_allocated(btt_e pblk) {
 }
 
 
-/* TODO: currently only support single block alloc range alloc?? */
+
+/* an extremely simple sequential block allocation strategy  */
 static int alloc_block(int dev_id, btt_e vblock, btt_e *pblock) {
 	if (!has_enigma_cb()) {
+		EMSG("Enigma cb not found!\n");
 		return NULL_CB;
 	}
 	/* TODO: lock */
@@ -40,14 +46,9 @@ static int alloc_block(int dev_id, btt_e vblock, btt_e *pblock) {
 	if (remaining < SECTOR_SIZE) {
 		return ALLOC_FAIL;
 	}
-	/* exceed the size of btt */
-	if (vblock > BTT_SIZE) {
-		return ALLOC_FAIL;
-	}
 	/* actual block allocation */
 	*pblock = b_map->idx++;
-	EMSG("allocating [%x]\n", *pblock);
-	btt[vblock] = *pblock;
+	EMSG("allocating pblk [%x] for vblk[%x] for dev [%d]\n", *pblock, vblock, dev_id);
 	/* TODO: suppose change it to alloc size */
 	b_map->allocated += SECTOR_SIZE;
 	return 0;
@@ -58,20 +59,31 @@ static int alloc_block(int dev_id, btt_e vblock, btt_e *pblock) {
  * TODO: move this to normal world */
 int look_up_block(int dev_id, btt_e vblock, btt_e *pblock) {
 	if (!has_enigma_cb()) {
+		EMSG("enigma cb is not initialized!\n");
 		return -1;
 	}
-	btt_e *btt = get_btt_for_device(dev_id);
-	/**pblock = btt[vblock];*/
-	*pblock = NULL_BLK;
+	/* enigma does not allocate block for actual fs, all linear mapped */
+	if (dev_id == actual_id) {
+		*pblock = vblock;
+		EMSG("not allocating for actual..\n");
+		return 0;
+	}
 	/* not allocated, try to allocate */
-	if (!pblk_allocated(*pblock)) {
+	if (!pblk_allocated(vblock)) {
 			int err = alloc_block(dev_id, vblock, pblock);
-			if (err == ALLOC_FAIL) {
+			if (err) {
 				/* TODO: debug info, etc.*/
+				EMSG("alloc failed.., err = %d\n", err);
 				*pblock = NULL_BLK;
 				return LOOKUP_FAIL;
 			}
 			return 0;
+	} else {
+		EMSG("pblk has already been allocated!\n");
+		*pblock = vblock;
+		/* TODO: break */
+		/* CoW needs to break the originla sharing... */
+		return 0;
 	}
 	return 0;
 }
@@ -86,21 +98,26 @@ btt_e *alloc_btt(int entries) {
 }
 
 
+static uint64_t get_sybil_start(void) {
+	return fs_size;
+}
+
 static int init_block_map(uint32_t alloc_size, uint32_t block_size, uint64_t total_size, struct block_map *bmap) {
 	bmap->block_size = block_size;
 	bmap->allocated = alloc_size;
 	bmap->total_size = total_size;
+	bmap->idx = get_sybil_start();
 	return 0;
 }
 
 int init_enigma_cb(void) {
 	int i;
-	/*enigma_cb.dev_count = SBD_NUM;*/
-	enigma_cb.dev_count = 1;
+	enigma_cb.dev_count = SBD_NUM;
 	enigma_cb.btt_size = BTT_SIZE;
 #if 1
+	/* not really useful */
 	for (i = 0; i < enigma_cb.dev_count; i++) {
-		btt_e *_btt = alloc_btt(enigma_cb.btt_size);
+		btt_e *_btt = alloc_btt(1);
 		enigma_cb.btt[i] = _btt;
 	}
 #endif

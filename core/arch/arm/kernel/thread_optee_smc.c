@@ -182,7 +182,7 @@ static uint32_t std_smc_entry(uint32_t a0, uint32_t a1, uint32_t a2,
 
 	/* handle smc calls from enigma, we pass all our args in registers */
 	if (a0 == ENIGMA_SMC_CALL) {
-		EMSG("caught enigma smc call! -- a0 = %x, a1 = %x, a2 = %x\n", a0, a1, a2);
+		/*EMSG("caught enigma smc call! -- a0 = %x, a1 = %x, a2 = %x, a3 = %x\n", a0, a1, a2, a3);*/
 		rv = enigma_entry(a1, a2, a3);
 		return rv;
 	}
