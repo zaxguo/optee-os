@@ -494,6 +494,10 @@ uint32_t enigma_entry(uint32_t op, uint32_t blk, uint32_t dev_id) {
 		case ENIGMA_RD:
 			/* TODO: we donot have encryption yet */
 			pblk = (blk == NULL_BLK) ? 0 : blk;
+			break;
+		case ENIGMA_INCR:
+			ret = inc_blk_ref(blk);
+			EMSG("incr ref:[%x] to [%x]\n", blk, ret);
 		default:
 			break;
 	}

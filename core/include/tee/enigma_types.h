@@ -3,6 +3,7 @@
 
 /* Some error codes also go here */
 #define NULL_BLK ((uint32_t)-1)
+#define FILEDATA ((uint32_t)-2)
 
 #define LOOKUP_FAIL 0x1
 #define ALLOC_FAIL	0x2

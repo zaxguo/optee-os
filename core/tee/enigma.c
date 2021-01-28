@@ -2,10 +2,12 @@
 #include <malloc.h>
 #include <trace.h>
 
+#define INIT_SYBIL_COUNT 2
 /* enigma control block, which stores btt, cipher, etc. */
 struct enigma_cb enigma_cb;
 int actual_id = 5;
-uint64_t fs_size;
+/* allocation start from sector 1 */
+uint64_t fs_size = 1;
 
 
 
@@ -25,10 +27,28 @@ static inline btt_e *get_btt_for_device(int lo_number) {
 	return enigma_cb.btt[lo_number];
 }
 
-static inline int pblk_allocated(btt_e pblk) {
-	return pblk != NULL_BLK;
+static inline int is_filedata(btt_e pblk) {
+	return (pblk == FILEDATA);
 }
 
+static inline int pblk_allocated(btt_e pblk) {
+	return (pblk != NULL_BLK);
+}
+
+int inc_blk_ref(btt_e pblk) {
+	btt_e *btt = get_btt_for_device(0);
+	return ++btt[pblk];
+}
+
+int dec_blk_ref(btt_e pblk) {
+	btt_e *btt =get_btt_for_device(0);
+	return --btt[pblk];
+}
+
+int get_blk_ref(btt_e pblk) {
+	btt_e *btt = get_btt_for_device(0);
+	return btt[pblk];
+}
 
 
 /* an extremely simple sequential block allocation strategy  */
@@ -40,7 +60,7 @@ static int alloc_block(int dev_id, btt_e vblock, btt_e *pblock) {
 	/* TODO: lock */
 	struct enigma_cb *cb = &enigma_cb;
 	struct block_map *b_map = &cb->b_map;
-	btt_e *btt = get_btt_for_device(dev_id);
+	/*btt_e *btt = get_btt_for_device(dev_id);*/
 	uint64_t remaining = b_map->total_size - b_map->allocated;
 	/* minimal alloc unit is 1 sector */
 	if (remaining < SECTOR_SIZE) {
@@ -48,15 +68,17 @@ static int alloc_block(int dev_id, btt_e vblock, btt_e *pblock) {
 	}
 	/* actual block allocation */
 	*pblock = b_map->idx++;
-	EMSG("allocating pblk [%x] for vblk[%x] for dev [%d]\n", *pblock, vblock, dev_id);
+	int cnt = inc_blk_ref(*pblock);
+	EMSG("allocating pblk [%x] for vblk[%x] for dev [%d], ref = %d\n", *pblock, vblock, dev_id, cnt);
 	/* TODO: suppose change it to alloc size */
 	b_map->allocated += SECTOR_SIZE;
 	return 0;
 }
 
-/* Given a SDB dev id and its virtual block, return a phyiscal disk block */
-/* This is the core BTT logic
- * TODO: move this to normal world */
+/* check the pblock passed from normal OS, allocate new blocks if necessary */
+/* TODO: `vblock` is misleading. It is the pblock number _AFTER_ btt lookup
+ * passed from OS
+ * */
 int look_up_block(int dev_id, btt_e vblock, btt_e *pblock) {
 	if (!has_enigma_cb()) {
 		EMSG("enigma cb is not initialized!\n");
@@ -65,10 +87,16 @@ int look_up_block(int dev_id, btt_e vblock, btt_e *pblock) {
 	/* enigma does not allocate block for actual fs, all linear mapped */
 	if (dev_id == actual_id) {
 		*pblock = vblock;
-		EMSG("not allocating for actual..\n");
+		EMSG("not allocating for actual.\n");
 		return 0;
 	}
-	/* not allocated, try to allocate */
+	/* we donot allocate for filedata block */
+	if (is_filedata(vblock)) {
+		*pblock = vblock;
+		EMSG("not allocating for filedata.\n");
+		return 0;
+	}
+	/* not allocated metadata blk, try to allocate */
 	if (!pblk_allocated(vblock)) {
 			int err = alloc_block(dev_id, vblock, pblock);
 			if (err) {
@@ -78,21 +106,35 @@ int look_up_block(int dev_id, btt_e vblock, btt_e *pblock) {
 				return LOOKUP_FAIL;
 			}
 			return 0;
+	/* allocated, examine its ref count */
 	} else {
-		EMSG("pblk has already been allocated!\n");
+		/* prepare to use the existing block if its ref count == 1 */
 		*pblock = vblock;
-		/* TODO: break */
-		/* CoW needs to break the originla sharing... */
+		btt_e *btt = get_btt_for_device(0);
+		EMSG("pblk [%x] has already been allocated (ref=%x). \n", vblock, btt[vblock]);
+		/* break sharing: decrement the old ref count then alloc new block */
+		if (get_blk_ref(*pblock) > 1) {
+			dec_blk_ref(*pblock);
+			int err = alloc_block(dev_id, vblock, pblock);
+			if (err) {
+					/* TODO: debug info, etc.*/
+					EMSG("alloc failed.., err = %d\n", err);
+					*pblock = NULL_BLK;
+					return LOOKUP_FAIL;
+			}
+		}
 		return 0;
 	}
 	return 0;
 }
 
+
 btt_e *alloc_btt(int entries) {
 	int i;
-	btt_e *head = malloc(BTT_ENTRY_SIZE * 1);
+	btt_e *head = malloc(BTT_ENTRY_SIZE * entries);
+	/* ref count */
 	for (i = 0; i < entries; i++) {
-		/**(head + i) = NULL_BLK;*/
+		*(head + i) = 0;
 	}
 	return head;
 }
@@ -117,13 +159,14 @@ int init_enigma_cb(void) {
 #if 1
 	/* not really useful */
 	for (i = 0; i < enigma_cb.dev_count; i++) {
-		btt_e *_btt = alloc_btt(1);
+		btt_e *_btt = alloc_btt(BTT_SIZE);
 		enigma_cb.btt[i] = _btt;
 	}
 #endif
 	enigma_cb.cipher = enigma_cb.btt[0];
 	init_block_map(512, 512, 1024*14400, &enigma_cb.b_map);
-	EMSG("enigma cb succussfully init..\n");
+	EMSG("enigma cb succussfully init...\n");
+	EMSG("bmap_idx = %ld\n", enigma_cb.b_map.idx);
 	return 0;
 }
 

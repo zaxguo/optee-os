@@ -4,10 +4,11 @@
 #include <tee_api_types.h>
 #include "enigma_types.h"
 
-#define BTT_SIZE (30001)
+#define BTT_SIZE (3001)
 #define BTT_ENTRY_SIZE (sizeof(btt_e))
 #define SECTOR_SIZE (512)
-#define SBD_NUM 10
+//#define SBD_NUM 10
+#define SBD_NUM 1
 
 #define BTT_ENC 0
 #define BTT_DEC	1
@@ -51,6 +52,9 @@ int free_btt(btt_e *btt);
 int init_enigma_cb(void);
 int decrypt_btt_entry(btt_e *btt);
 int look_up_block(int dev_id, btt_e vblock, btt_e *pblock);
+int inc_blk_ref(btt_e pblk);
+int get_blk_ref(btt_e pblk);
+int dec_blk_ref(btt_e pblk);
 
 #endif
 
