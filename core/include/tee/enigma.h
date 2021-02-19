@@ -4,7 +4,8 @@
 #include <tee_api_types.h>
 #include "enigma_types.h"
 
-#define BTT_SIZE (3001)
+//#define BTT_SIZE (6001)
+#define BTT_SIZE (66000)
 #define BTT_ENTRY_SIZE (sizeof(btt_e))
 #define SECTOR_SIZE (512)
 //#define SBD_NUM 10
@@ -15,7 +16,8 @@
 
 //typedef uint64_t btt_e;
 /* lwg: maybe 32b is enough, which can squeeze into 32b reg during world switch */
-typedef uint32_t btt_e;
+typedef uint32_t sector_t;
+typedef uint8_t	 btt_e;
 typedef btt_e crypto_skcipher;
 
 
@@ -41,7 +43,7 @@ struct enigma_cb {
 
 struct lookup_result {
 	bool shared;
-	btt_e block;
+	sector_t block;
 };
 
 extern struct enigma_cb enigma_cb;
@@ -50,11 +52,11 @@ int init_btt_for_device(int lo_number);
 btt_e *alloc_btt(int size);
 int free_btt(btt_e *btt);
 int init_enigma_cb(void);
-int decrypt_btt_entry(btt_e *btt);
-int look_up_block(int dev_id, btt_e vblock, btt_e *pblock);
-int inc_blk_ref(btt_e pblk);
-int get_blk_ref(btt_e pblk);
-int dec_blk_ref(btt_e pblk);
+int decrypt_btt_entry(sector_t *btt);
+int look_up_block(int dev_id, sector_t vblock, sector_t *pblock);
+int inc_blk_ref(sector_t pblk);
+int get_blk_ref(sector_t pblk);
+int dec_blk_ref(sector_t pblk);
 
 #endif
 
