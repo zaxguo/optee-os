@@ -5,7 +5,7 @@
 #include "enigma_types.h"
 
 //#define BTT_SIZE (6001)
-#define BTT_SIZE (66000)
+#define BTT_SIZE (80001)
 #define BTT_ENTRY_SIZE (sizeof(btt_e))
 #define SECTOR_SIZE (512)
 //#define SBD_NUM 10
