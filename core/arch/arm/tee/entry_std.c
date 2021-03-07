@@ -488,7 +488,7 @@ uint32_t enigma_entry(uint32_t op, sector_t blk, uint32_t dev_id) {
 			ret = look_up_block(dev_id, blk, &pblk);
 			/*EMSG("alloc:[%x] -> [%x]\n", blk, pblk);*/
 			if (pblk == NULL_BLK) {
-				EMSG("fail to alloc block [%x]\n", pblk);
+				EMSG("alloc fail!ret = %d:[dev %d:%x->%x]\n", ret, dev_id, blk, pblk);
 			}
 			break;
 		case ENIGMA_RD:
@@ -498,6 +498,10 @@ uint32_t enigma_entry(uint32_t op, sector_t blk, uint32_t dev_id) {
 		case ENIGMA_INCR:
 			ret = inc_blk_ref(blk);
 			/*EMSG("incr ref:[%x] to [%x]\n", blk, ret);*/
+			break;
+		case ENIGMA_LOOKUP_BTT:
+			pblk = get_blk_ref(blk);
+			break;
 		default:
 			break;
 	}
