@@ -188,7 +188,6 @@ void __weak tee_entry_fast(struct thread_smc_args *args)
 void __tee_entry_fast(struct thread_smc_args *args)
 {
 	switch (args->a0) {
-
 	/* Generic functions */
 	case OPTEE_SMC_CALLS_COUNT:
 		tee_entry_get_api_call_count(args);

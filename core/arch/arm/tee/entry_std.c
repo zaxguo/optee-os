@@ -493,6 +493,9 @@ uint32_t enigma_entry(uint32_t op, sector_t blk, uint32_t dev_id) {
 			break;
 		case ENIGMA_RD:
 			/* TODO: we donot have encryption yet */
+			if (blk == 2120) {
+				EMSG("??\n");
+			}
 			pblk = (blk == NULL_BLK) ? 0 : blk;
 			break;
 		case ENIGMA_INCR:

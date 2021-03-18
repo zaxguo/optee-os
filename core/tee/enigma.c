@@ -6,7 +6,7 @@
 #define INIT_SYBIL_COUNT 2
 /* enigma control block, which stores btt, cipher, etc. */
 struct enigma_cb enigma_cb;
-int actual_id = 5;
+int actual_id = 0;
 /* allocation start from sector 1 */
 uint64_t fs_size = 1;
 
@@ -39,6 +39,10 @@ static inline int pblk_allocated(sector_t pblk) {
 
 int inc_blk_ref(sector_t pblk) {
 	btt_e *btt = get_btt_for_device(0);
+	if (pblk >= BTT_SIZE) {
+		EMSG("!!! OOO error!!!\n");
+		while(1);
+	}
 	return ++btt[pblk];
 }
 
@@ -49,6 +53,10 @@ int dec_blk_ref(sector_t pblk) {
 
 int get_blk_ref(sector_t pblk) {
 	btt_e *btt = get_btt_for_device(0);
+	if (pblk >= BTT_SIZE) {
+		EMSG("requesting %d (btt size:%d)..\n", pblk, BTT_SIZE);
+		return -1;
+	}
 	return btt[pblk];
 }
 
@@ -78,7 +86,7 @@ static int alloc_block(int dev_id, sector_t vblock, sector_t *pblock) {
 	int cnt = inc_blk_ref(*pblock);
 	/*EMSG("allocating pblk [%x] for vblk[%x] for dev [%d], ref = %d\n", *pblock, vblock, dev_id, cnt);*/
 	/* TODO: suppose change it to alloc size */
-	b_map->allocated += SECTOR_SIZE;
+	/*b_map->allocated += SECTOR_SIZE;*/
 	return 0;
 }
 
@@ -94,6 +102,9 @@ int look_up_block(int dev_id, sector_t vblock, sector_t *pblock) {
 	/* enigma does not allocate block for actual fs, all linear mapped */
 #if 1
 	if (dev_id == actual_id) {
+		if (vblock == 2120) {
+			EMSG("xxxx\n");
+		}
 		*pblock = vblock;
 		return 0;
 	}
@@ -101,14 +112,14 @@ int look_up_block(int dev_id, sector_t vblock, sector_t *pblock) {
 	/* we donot allocate for filedata block */
 	if (is_filedata(vblock)) {
 		*pblock = vblock;
-		/*EMSG("[%d:%08x]:not allocating for filedata.\n", dev_id, vblock);*/
+		/*EMSG("[%d:%08x:%ld]:not allocating for filedata.\n", dev_id, vblock, enigma_cb.b_map.idx);*/
 		return 0;
 	}
 	/* not allocated metadata blk, try to allocate */
 	if (!pblk_allocated(vblock)) {
-			cpu_spin_lock(&map_lock);
+			/*cpu_spin_lock(&map_lock);*/
 			int err = alloc_block(dev_id, vblock, pblock);
-			cpu_spin_unlock(&map_lock);
+			/*cpu_spin_unlock(&map_lock);*/
 			if (err) {
 				/* TODO: debug info, etc.*/
 				EMSG("alloc failed... err = %d\n", err);
@@ -127,12 +138,12 @@ int look_up_block(int dev_id, sector_t vblock, sector_t *pblock) {
 		/*EMSG("pblk [%x] has already been allocated (ref=%x). \n", vblock, btt[vblock]);*/
 		/* break sharing: decrement the old ref count then alloc new block */
 		if (get_blk_ref(*pblock) > 1) {
-			cpu_spin_lock(&btt_lock);
+			/*cpu_spin_lock(&btt_lock);*/
 			dec_blk_ref(*pblock);
-			cpu_spin_unlock(&btt_lock);
-			cpu_spin_lock(&map_lock);
+			/*cpu_spin_unlock(&btt_lock);*/
+			/*cpu_spin_lock(&map_lock);*/
 			int err = alloc_block(dev_id, vblock, pblock);
-			cpu_spin_unlock(&map_lock);
+			/*cpu_spin_unlock(&map_lock);*/
 			if (err) {
 					/* TODO: debug info, etc.*/
 					EMSG("alloc failed.., err = %d\n", err);

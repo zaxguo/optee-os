@@ -92,7 +92,8 @@ CFG_MSG_LONG_PREFIX_MASK ?= 0x1a
 CFG_WITH_SOFTWARE_PRNG ?= y
 
 # Number of threads
-CFG_NUM_THREADS ?= 2
+#CFG_NUM_THREADS ?= 2
+CFG_NUM_THREADS ?= 4
 
 # API implementation version
 CFG_TEE_API_VERSION ?= GPD-1.1-dev
@@ -260,7 +261,7 @@ CFG_TA_ASLR_MAX_OFFSET_PAGES ?= 128
 # When this flag is enabled, the early init code will introduce a random
 # offset when mapping TEE Core. ASLR makes the exploitation of memory
 # corruption vulnerabilities more difficult.
-CFG_CORE_ASLR ?= y
+CFG_CORE_ASLR ?= n
 
 # Load user TAs from the REE filesystem via tee-supplicant
 CFG_REE_FS_TA ?= y

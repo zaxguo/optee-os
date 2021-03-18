@@ -34,7 +34,6 @@ void lwg_std_entry(void) {
 
 void thread_handle_fast_smc(struct thread_smc_args *args)
 {
-	EMSG("entered...\n");
 	thread_check_canaries();
 
 #ifdef CFG_VIRTUALIZATION
@@ -44,7 +43,14 @@ void thread_handle_fast_smc(struct thread_smc_args *args)
 	}
 #endif
 
-	tee_entry_fast(args);
+#if 1
+	if (args->a0 == ENIGMA_FAST_CALL) {
+		int ret = enigma_entry(args->a1, args->a2, args->a3);
+		args->a0 = ret;
+	} else {
+		tee_entry_fast(args);
+	}
+#endif
 
 #ifdef CFG_VIRTUALIZATION
 	virt_unset_guest();
@@ -69,6 +75,11 @@ uint32_t thread_handle_std_smc(uint32_t a0, uint32_t a1, uint32_t a2,
 	uint32_t rv = OPTEE_SMC_RETURN_OK;
 
 	/*unpack_smc_args(a0, a1, a2, a3, a4, a5, a6, a7);*/
+#if 0
+	if (a0 == ENIGMA_SMC_CALL) {
+		unpack_smc_args(a0, a1, a2, a3, a4, a5, a6, a7);
+	}
+#endif
 	thread_check_canaries();
 
 #ifdef CFG_VIRTUALIZATION
@@ -182,7 +193,7 @@ static uint32_t std_smc_entry(uint32_t a0, uint32_t a1, uint32_t a2,
 
 	/* handle smc calls from enigma, we pass all our args in registers */
 	if (a0 == ENIGMA_SMC_CALL) {
-		/*EMSG("caught enigma smc call! -- a0 = %x, a1 = %x, a2 = %x, a3 = %x\n", a0, a1, a2, a3);*/
+		/*EMSG("caught enigma smc call! -- a0 = %x, a1 = %d, a2 = %d, a3 = %x\n", a0, a1, a2, a3);*/
 		rv = enigma_entry(a1, a2, a3);
 		return rv;
 	}
@@ -229,6 +240,11 @@ uint32_t __weak __thread_std_smc_entry(uint32_t a0, uint32_t a1, uint32_t a2,
 				       uint32_t a3)
 {
 	uint32_t rv = 0;
+
+	/*if (a0 == ENIGMA_SMC_CALL) {*/
+		/*EMSG("caught enigma smc call! -- a0 = %x, a1 = %d, a2 = %d, a3 = %x\n", a0, a1, a2, a3);*/
+	/*}*/
+
 
 #ifdef CFG_VIRTUALIZATION
 	virt_on_stdcall();
