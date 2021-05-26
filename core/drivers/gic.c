@@ -394,6 +394,8 @@ void gic_it_handle(struct gic_data *gd)
 	uint32_t iar;
 	uint32_t id;
 
+	DMESG("entered...\n");
+
 	iar = gic_read_iar(gd);
 	id = iar & GICC_IAR_IT_ID_MASK;
 

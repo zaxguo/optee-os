@@ -6,6 +6,7 @@ srcs-y += arch_svc.c
 else
 srcs-y += svc_dummy.c
 endif
+srcs-y += mmc_replay.c
 srcs-y += entry_std.c
 srcs-y += entry_fast.c
 cppflags-entry_fast.c-y += -DTEE_IMPL_GIT_SHA1=$(TEE_IMPL_GIT_SHA1)

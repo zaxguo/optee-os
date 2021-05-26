@@ -480,6 +480,8 @@ uint32_t __weak tee_entry_std(struct optee_msg_arg *arg, uint32_t num_params)
 	return __tee_entry_std(arg, num_params);
 }
 
+extern void replay_read_single_block(void *host, uint32_t val, uint32_t rw);
+
 uint32_t enigma_entry(uint32_t op, sector_t blk, uint32_t dev_id) {
 	int ret;
 	sector_t pblk = NULL_BLK;
@@ -493,9 +495,6 @@ uint32_t enigma_entry(uint32_t op, sector_t blk, uint32_t dev_id) {
 			break;
 		case ENIGMA_RD:
 			/* TODO: we donot have encryption yet */
-			if (blk == 2120) {
-				EMSG("??\n");
-			}
 			pblk = (blk == NULL_BLK) ? 0 : blk;
 			break;
 		case ENIGMA_INCR:
@@ -503,6 +502,15 @@ uint32_t enigma_entry(uint32_t op, sector_t blk, uint32_t dev_id) {
 			/*EMSG("incr ref:[%x] to [%x]\n", blk, ret);*/
 			break;
 		case ENIGMA_LOOKUP_BTT:
+			{
+			void *sdhost = phys_to_virt_io(0x3f202000);
+			#define SDEDM 0x34
+			uint32_t val = *(uint32_t *)(sdhost + SDEDM);
+			EMSG("reading EDM reg = %08x\n", val);
+			thread_set_foreign_intr(true);
+			replay_read_single_block(sdhost, 0, 0);
+			break;
+			}
 			pblk = get_blk_ref(blk);
 			break;
 		default:

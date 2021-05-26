@@ -41,6 +41,14 @@
 register_phys_mem_pgdir(MEM_AREA_IO_NSEC,
 			CONSOLE_UART_BASE, SERIAL8250_UART_REG_SIZE);
 
+/* setup sdhost reg */
+register_phys_mem_pgdir(MEM_AREA_IO_NSEC,
+			SDHOST_BASE, SDHOST_REG_SIZE);
+/* irq chip */
+register_phys_mem_pgdir(MEM_AREA_IO_NSEC,
+			IRQ_BASE, IRQ_REG_SIZE);
+
+
 static const struct thread_handlers handlers = {
 	.cpu_on = cpu_on_handler,
 	.cpu_off = pm_do_nothing,
@@ -62,4 +70,6 @@ void console_init(void)
 	serial8250_uart_init(&console_data, CONSOLE_UART_BASE,
 			     CONSOLE_UART_CLK_IN_HZ, CONSOLE_BAUDRATE);
 	register_serial_console(&console_data.chip);
+
+
 }

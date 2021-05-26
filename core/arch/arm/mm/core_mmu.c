@@ -669,9 +669,11 @@ uint32_t core_mmu_type_to_attr(enum teecore_memtypes t)
 	case MEM_AREA_NSEC_SHM:
 		return attr | TEE_MATTR_PRW | cached;
 	case MEM_AREA_EXT_DT:
+	/* lwg: the diff between nsec and sec.. PRW = read/write  */
 	case MEM_AREA_IO_NSEC:
 		return attr | TEE_MATTR_PRW | noncache;
 	case MEM_AREA_IO_SEC:
+		/* MATTR_SECURE is supposed to work with TZASC?? */
 		return attr | TEE_MATTR_SECURE | TEE_MATTR_PRW | noncache;
 	case MEM_AREA_RAM_NSEC:
 		return attr | TEE_MATTR_PRW | cached;

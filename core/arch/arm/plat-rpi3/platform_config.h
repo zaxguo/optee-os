@@ -45,6 +45,12 @@
 #define CONSOLE_BAUDRATE	115200
 #define CONSOLE_UART_CLK_IN_HZ	19200000
 
+#define SDHOST_BASE 0x3f202000
+#define SDHOST_REG_SIZE 0x100
+
+#define IRQ_BASE 0x3f00b200
+#define IRQ_REG_SIZE  0x200
+
 /*
  * RPi memory map
  *

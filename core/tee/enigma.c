@@ -70,7 +70,7 @@ static int alloc_block(int dev_id, sector_t vblock, sector_t *pblock) {
 	/* lwg: locking outside this function */
 	struct enigma_cb *cb = &enigma_cb;
 	struct block_map *b_map = &cb->b_map;
-	uint64_t remaining = b_map->total_size - b_map->allocated;
+	/*uint64_t remaining = b_map->total_size - b_map->allocated;*/
 
 	if (b_map->idx > BTT_SIZE) {
 		EMSG("running out of blocks!!!");
@@ -78,9 +78,9 @@ static int alloc_block(int dev_id, sector_t vblock, sector_t *pblock) {
 	}
 
 	/* minimal alloc unit is 1 sector */
-	if (remaining < SECTOR_SIZE) {
-		return ALLOC_FAIL;
-	}
+	/*if (remaining < SECTOR_SIZE) {*/
+		/*return ALLOC_FAIL;*/
+	/*}*/
 	/* actual block allocation */
 	*pblock = b_map->idx++;
 	int cnt = inc_blk_ref(*pblock);
@@ -102,9 +102,6 @@ int look_up_block(int dev_id, sector_t vblock, sector_t *pblock) {
 	/* enigma does not allocate block for actual fs, all linear mapped */
 #if 1
 	if (dev_id == actual_id) {
-		if (vblock == 2120) {
-			EMSG("xxxx\n");
-		}
 		*pblock = vblock;
 		return 0;
 	}
