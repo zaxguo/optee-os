@@ -993,7 +993,8 @@ LOCAL_FUNC elx_irq , :
 #if defined(CFG_ARM_GICV3)
 	native_intr_handler	irq
 #else
-	foreign_intr_handler	irq
+	/* foreign_intr_handler	irq */
+	native_intr_handler	irq
 #endif
 END_FUNC elx_irq
 

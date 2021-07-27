@@ -31,6 +31,7 @@
 #include <kernel/generic_boot.h>
 #include <kernel/panic.h>
 #include <kernel/pm_stubs.h>
+#include <kernel/interrupt.h>
 #include <mm/core_memprot.h>
 #include <mm/tee_pager.h>
 #include <platform_config.h>
@@ -47,6 +48,10 @@ register_phys_mem_pgdir(MEM_AREA_IO_NSEC,
 /* irq chip */
 register_phys_mem_pgdir(MEM_AREA_IO_NSEC,
 			IRQ_BASE, IRQ_REG_SIZE);
+
+/* local irq chip -- lwg: ??? 0x40000000 really can work?? */
+register_phys_mem_pgdir(MEM_AREA_IO_NSEC,
+			0x40000000, IRQ_REG_SIZE);
 
 
 static const struct thread_handlers handlers = {
@@ -70,6 +75,5 @@ void console_init(void)
 	serial8250_uart_init(&console_data, CONSOLE_UART_BASE,
 			     CONSOLE_UART_CLK_IN_HZ, CONSOLE_BAUDRATE);
 	register_serial_console(&console_data.chip);
-
-
 }
+

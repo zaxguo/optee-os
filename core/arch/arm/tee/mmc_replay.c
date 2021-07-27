@@ -1,6 +1,11 @@
 #include <types_ext.h>
 #include <inttypes.h>
 #include <trace.h>
+#include <kernel/interrupt.h>
+#include <kernel/misc.h>
+#include <mm/core_memprot.h>
+#include <mm/core_mmu.h>
+#include <io.h>
 
 typedef uint32_t u32;
 
@@ -19,6 +24,29 @@ typedef uint32_t u32;
 #define SDHBCT 0x3c /* Host byte count (debug)         - 32 R/W */
 #define SDDATA 0x40 /* Data to/from SD card            - 32 R/W */
 #define SDHBLC 0x50 /* Host block count (SDIO/SDHC)    -  9 R/W */
+
+#define SDCMD_NEW_FLAG                  0x8000
+#define SDCMD_FAIL_FLAG                 0x4000
+#define SDCMD_BUSYWAIT                  0x800
+#define SDCMD_NO_RESPONSE               0x400
+#define SDCMD_LONG_RESPONSE             0x200
+#define SDCMD_WRITE_CMD                 0x80
+#define SDCMD_READ_CMD                  0x40
+#define SDCMD_CMD_MASK                  0x3f
+
+#define SDCDIV_MAX_CDIV                 0x7ff
+
+#define SDHSTS_BUSY_IRPT                0x400
+#define SDHSTS_BLOCK_IRPT               0x200
+#define SDHSTS_SDIO_IRPT                0x100
+#define SDHSTS_REW_TIME_OUT             0x80
+#define SDHSTS_CMD_TIME_OUT             0x40
+#define SDHSTS_CRC16_ERROR              0x20
+#define SDHSTS_CRC7_ERROR               0x10
+#define SDHSTS_FIFO_ERROR               0x08
+/* Reserved */
+/* Reserved */
+#define SDHSTS_DATA_FLAG                0x01
 
 #define CHECK_DIVERGENCE() \
 	if (val != expected) { \
@@ -73,9 +101,9 @@ void replay_read_single_block(void *host, u32 block, int rw) {
 	CHECK_DIVERGENCE();
 
 	if (rw == 0) {
-		expected = 0x00000051;
+		expected = 0x00008051;
 	} else {
-		expected = 0x00000098;
+		expected = 0x00008098;
 	}
 	val = bcm2835_sdhost_read(host, SDCMD);
 	CHECK_DIVERGENCE();
@@ -84,4 +112,71 @@ void replay_read_single_block(void *host, u32 block, int rw) {
 	val = bcm2835_sdhost_read(host, SDRSP0);
 	CHECK_DIVERGENCE();
 	return;
+}
+
+void replay_irq(void *host) {
+	u32 val, expected, word, i, j;
+
+	while((bcm2835_sdhost_read(host, SDHSTS) & SDHSTS_DATA_FLAG) != 0x1) {
+		DMSG("polling..\n");
+	}
+
+	expected = 0x0000001;
+	val = bcm2835_sdhost_read(host, SDHSTS);
+	CHECK_DIVERGENCE();
+
+	val = 0x00000701;
+	bcm2835_sdhost_write(host, val, SDHSTS);
+
+	word = 16;
+	i = 0;
+	while(i < 128/word) {
+		j = 0;
+		expected = 0x00010902;
+		val = bcm2835_sdhost_read(host, SDEDM);
+		CHECK_DIVERGENCE();
+		while (j < word) {
+			val = bcm2835_sdhost_read(host, SDDATA);
+			DMSG("reading %08x...\n", val);
+			j++;
+		}
+		i++;
+	}
+	expected = 0x00000000;
+	val = bcm2835_sdhost_read(host, SDHSTS);
+	CHECK_DIVERGENCE();
+
+	val = 0x0000040e;
+	bcm2835_sdhost_write(host, val, SDHCFG);
+
+	expected = 0x00010801;
+	val = bcm2835_sdhost_read(host, SDEDM);
+	CHECK_DIVERGENCE();
+
+	expected = 0x00000000;
+	val = bcm2835_sdhost_read(host, SDHSTS);
+	CHECK_DIVERGENCE();
+}
+
+
+void itr_core_handler(void) {
+	uint32_t val;
+	DMSG("handling irq by replaying...\n");
+	void *irq_base = phys_to_virt_io(0x3f00b200);
+	void *local_irq_base = phys_to_virt_io(0x40000000);
+	void *host = phys_to_virt_io(0x3f202000);
+	val = io_read32(irq_base);
+	DMSG("pend 0 = %08x\n", val);
+	val = io_read32(irq_base + 0x4);
+	DMSG("pend 1 = %08x\n", val);
+	val = io_read32(irq_base + 0x8);
+	DMSG("pend 2 = %08x\n", val);
+
+	thread_mask_exceptions(THREAD_EXCP_FOREIGN_INTR);
+	int cpu = get_core_pos();
+	val = io_read32(local_irq_base + 0xc + 4 * cpu);
+	DMSG("pending bit = %08x...\n", val);
+
+	replay_irq(host);
+
 }

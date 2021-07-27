@@ -181,7 +181,7 @@ int init_enigma_cb(void) {
 	int i;
 	enigma_cb.dev_count = SBD_NUM;
 	enigma_cb.btt_size = BTT_SIZE;
-#if 1
+#if 0
 	for (i = 0; i < enigma_cb.dev_count; i++) {
 		btt_e *_btt = alloc_btt(BTT_SIZE);
 		enigma_cb.btt[i] = _btt;

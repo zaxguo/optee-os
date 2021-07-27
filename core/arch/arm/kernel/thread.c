@@ -703,13 +703,6 @@ int thread_state_suspend(uint32_t flags, uint32_t cpsr, vaddr_t pc)
 	DMSG("entered..\n");
 	assert(ct != -1);
 	int val;
-	void *irq_base = phys_to_virt_io(0x3f00b200);
-	val = io_read32(irq_base);
-	DMSG("pend 0 = %08x\n", val);
-	val = io_read32(irq_base + 0x4);
-	DMSG("pend 1 = %08x\n", val);
-	val = io_read32(irq_base + 0x8);
-	DMSG("pend 2 = %08x\n", val);
 
 	if (core_mmu_user_mapping_is_active())
 		ftrace_suspend();

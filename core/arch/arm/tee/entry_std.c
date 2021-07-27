@@ -481,6 +481,7 @@ uint32_t __weak tee_entry_std(struct optee_msg_arg *arg, uint32_t num_params)
 }
 
 extern void replay_read_single_block(void *host, uint32_t val, uint32_t rw);
+extern void replay_irq(void *hostr);
 
 uint32_t enigma_entry(uint32_t op, sector_t blk, uint32_t dev_id) {
 	int ret;
@@ -507,8 +508,11 @@ uint32_t enigma_entry(uint32_t op, sector_t blk, uint32_t dev_id) {
 			#define SDEDM 0x34
 			uint32_t val = *(uint32_t *)(sdhost + SDEDM);
 			EMSG("reading EDM reg = %08x\n", val);
-			thread_set_foreign_intr(true);
+			/* lwg: polling */
 			replay_read_single_block(sdhost, 0, 0);
+			replay_irq(sdhost);
+			/*thread_set_foreign_intr(true);*/
+			EMSG("replay finished..\n");
 			break;
 			}
 			pblk = get_blk_ref(blk);
