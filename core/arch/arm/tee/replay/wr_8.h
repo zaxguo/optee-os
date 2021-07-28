@@ -1,19 +1,20 @@
 #include "common.h"
 
-static void wr_8(int sec, void *replay_dma_chan, void *host) {
+static void wr_template(int addr, int count, void *replay_dma_chan, void *host) {
 	if (replay_dma_chan == NULL || host == NULL) {
 		EMSG("dma: %p or host: %p, invalid!\n", replay_dma_chan, host);
 		return;
 	}
-	dma_addr_t cb = prepare_cb(TO_DEV);
+	dma_addr_t cb = prepare_cb(TO_DEV, count);
 	req_read(host, SDEDM, 0x00010801);
 	req_read(host, SDCMD, 0x0000000d);
 	req_read(host, SDHSTS, 0x00000000);
 	req_write(host, SDHCFG, 0x0000040e);
 	req_write(host, SDHBCT, 0x00000200);
-	req_write(host, SDHBLC, 0x00000008);
+	/* blk count parameterize */
+	req_write(host, SDHBLC, count);
 	/*lwg: below sector number, parameterized */
-	req_write(host, SDARG, sec);
+	req_write(host, SDARG, addr);
 	req_write(host, SDCMD, 0x00008099);
 	req_write(replay_dma_chan, BCM2835_DMA_ADDR, cb);
 	printk("%d:start... (debug = %08x, src = %08x)\n", __LINE__, readl(replay_dma_chan + BCM2835_DMA_DEBUG), readl(replay_dma_chan + BCM2835_DMA_SOURCE_AD));
@@ -31,12 +32,25 @@ static void wr_8(int sec, void *replay_dma_chan, void *host) {
 	/* ack */
 	reply_write(replay_dma_chan, BCM2835_DMA_CS, 0x00000004);
 	printk("%d:ack ... (debug = %08x, src = %08x)\n", __LINE__, readl(replay_dma_chan + BCM2835_DMA_DEBUG), readl(replay_dma_chan + BCM2835_DMA_SOURCE_AD));
-	reply_read(host, SDHSTS, 0x00000000);
+	/* > 8 sectors will busy flag will be on */
+	if (count > 8) {
+		reply_read(host, SDHSTS, 0x00000001);
+	} else {
+		reply_read(host, SDHSTS, 0x00000000);
+	}
 	reply_read(host, SDCMD, 0x00000099);
-	reply_read(host, SDEDM, 0x00010801);
+	if (count > 8) {
+		reply_read(host, SDEDM, 0x00010807);
+	} else {
+		reply_read(host, SDEDM, 0x00010801);
+	}
 	reply_write(host, SDHCFG, 0x0000040e);
 	reply_read(host, SDCMD, 0x00000099);
-	reply_read(host, SDHSTS, 0x00000000);
+	if (count > 8) {
+		reply_read(host, SDHSTS, 0x00000001);
+	} else {
+		reply_read(host, SDHSTS, 0x00000000);
+	}
 	reply_write(host, SDARG, 0x00000000);
 	reply_write(host, SDCMD, 0x0000880c);
 	/* poll */
@@ -57,10 +71,19 @@ static void wr_8(int sec, void *replay_dma_chan, void *host) {
 	req_read(host, SDHSTS, 0x00000000);
 	req_write(host, SDARG, 0x59b40000);
 	req_write(host, SDCMD, 0x0000800d);
-	req_read(host, SDCMD, 0x0000800d);
-	req_read(host, SDCMD, 0x0000800d);
-	req_read(host, SDCMD, 0x0000000d);
+	//req_read(host, SDCMD, 0x0000800d);
+	//req_read(host, SDCMD, 0x0000800d);
+	//req_read(host, SDCMD, 0x0000000d);
+	// summarize
+	while(readl(host + SDCMD) != 0x0000000d);
 	req_read(host, SDRSP0, 0x00000900);
 }
 
+static void wr_256(int sec, void *replay_dma_chan, void *host) {
+	wr_template(sec, 256, replay_dma_chan, host);
+}
+
+static void wr_8(int sec, void *replay_dma_chan, void *host) {
+	wr_template(sec, 8, replay_dma_chan, host);
+}
 

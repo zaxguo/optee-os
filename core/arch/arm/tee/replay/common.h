@@ -86,58 +86,80 @@ static void* align(void *old, int bits) {
 	return (void *)tmp;
 }
 
-static dma_addr_t prepare_cb(int dir) {
+static void *alloc_aligned(int size, int alignment) {
+	u32 *ret = malloc(size + (1 << alignment) + sizeof(u32 *));
+	if (!ret) {
+		printk("lwg:%s:%d: cannot get mem of %d bytes!!!\n", __func__, __LINE__, size);
+		return 0;
+	}
+	if ((u32)ret & ((1 << alignment) - 1)) {
+		ret = align(ret, alignment);
+		printk("cb @ %p:%08x\n", ret, virt_to_phys(ret));
+	}
+	return ret;
+}
+
+static void dump_cb(u32 *cb) {
+	EMSG("cb[00]:%08x %08x %08x %08x", *cb, *(cb + 1), *(cb + 2), *(cb + 3));
+	EMSG("cb[04]:%08x %08x %08x %08x", *(cb + 4), *(cb + 5), *(cb + 6), *(cb + 7));
+}
+
+static dma_addr_t prepare_cb(int dir, int count) {
+	u32 i = 0;
 	u32 alignment = 8;
-	u32 *cb = malloc(4096);
-	u32 *data = malloc(4096 + (1 << alignment) + 8);
-	if (!cb) {
-		printk("lwg:%s:%d: cannot get the shm of %d bytes!!!\n", __func__, __LINE__, 32);
-		return 0;
-	}
-	if (!data) {
-		printk("lwg:%s:%d: cannot get the shm of %d bytes!!!\n", __func__, __LINE__, 4096);
-		return 0;
-	}
-	printk("cb @ %p:%08x\n", cb, virt_to_phys(cb));
-	printk("data @ %p:%08x\n", data, virt_to_phys(data));
-	/* ascii 8 */
-	if ((u32)cb & ((1 << alignment) - 1)) {
-		cb = align(cb, alignment);
+	u32 n_cb = (count - 1)/8 + 1;
+	u32 **cb_list = malloc(n_cb * sizeof(u32*));
+	u32 **pg_list = malloc(n_cb * sizeof(u32*));
+	for (i = 0; i < n_cb; i++) {
+		u32 *cb = alloc_aligned(128, alignment);
+		u32 *pg = alloc_aligned(4096, alignment);
+		memset(cb, 0, 128);
+		/* XXX:generated data */
+		memset(pg, i, 4096);
+		*(cb_list + i) = cb;
+		*(pg_list + i) = pg;
 		printk("cb @ %p:%08x\n", cb, virt_to_phys(cb));
+		printk("data @ %p:%08x\n", pg, virt_to_phys(pg));
 	}
-	if ((u32)data & ((1 << alignment) -1)) {
-		data = align(data, alignment);
-	}
-	memset(data, 0x39, 4096);
-	dsb();
-	if (dir == TO_DEV) {
-		/* src */
-		*cb = 0x000d0149;
-		*(cb + 1) = virt_to_phys(data) - DMA_OFF;
-		/* dst */
-		*(cb + 2) = 0x7e202040;
+	for (i = 0; i < n_cb; i++) {
+		u32 *cb = cb_list[i];
+		u32 *data = pg_list[i];
+		if (dir == TO_DEV) {
+			/* src */
+			*cb = 0x000d0148;
+			*(cb + 1) = virt_to_phys(data) - DMA_OFF;
+			/* dst */
+			*(cb + 2) = 0x7e202040;
+		} else if (dir == FROM_DEV) {
+			*cb = 0x000d0418;
+			/* src */
+			*(cb + 1) = 0x7e202040;
+			/* dst */
+			*(cb + 2) = virt_to_phys(data) - DMA_OFF;
+		}
 		/* length */
 		*(cb + 3) = 0x00001000;
-	} else if (dir == FROM_DEV) {
-		*cb = 0x000d0419;
-		/* src */
-		*(cb + 1) = 0x7e202040;
-		/* dst */
-		*(cb + 2) = virt_to_phys(data) - DMA_OFF;
-		/* length */
-		*(cb + 3) = 0x00000ff4;
-
+		/* next cb */
+		if (i < (n_cb - 1)) {
+			*(cb + 5) = virt_to_phys(cb_list[i + 1]) - DMA_OFF;
+		}
+		/* last chained cb */
+		if (i == (n_cb - 1)) {
+			/* flip active bit */
+			*cb = 0x000d0419;
+			/* read due to silicon bug */
+			if (dir == FROM_DEV)
+				*(cb + 3) = 0x00000ff4;
+			*(cb + 5) = 0x0;
+		}
+		/*print_hex_dump(KERN_WARNING, "cb:", DUMP_PREFIX_OFFSET, 16, 4, cb, 32, 0);*/
+		//__flush_dcache_area(cb, 32);
+		//DHEXDUMP(cb, 32);
+		dump_cb(cb);
+		cache_operation(TEE_CACHEINVALIDATE, cb, 128);
+		//cache_operation(TEE_CACHEINVALIDATE, data, 4096);
 	}
-	*(cb + 4) = 0x0;
-	*(cb + 5) = 0x0;
-	*(cb + 6) = 0x0;
-	*(cb + 7) = 0x0;
-	/*print_hex_dump(KERN_WARNING, "cb:", DUMP_PREFIX_OFFSET, 16, 4, cb, 32, 0);*/
-	//DHEXDUMP(cb, 32);
-	//__flush_dcache_area(cb, 32);
-	cache_operation(TEE_CACHEINVALIDATE, cb, 4096);
-	cache_operation(TEE_CACHEINVALIDATE, data, 4096);
-	return virt_to_phys(cb) - DMA_OFF;
+	return virt_to_phys(cb_list[0]) - DMA_OFF;
 }
 
 

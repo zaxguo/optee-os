@@ -1,8 +1,8 @@
 #include "common.h"
 
-static void rd_8(int sec, void *replay_dma_chan, void *host)
+static void rd_template(int sec, int count, void *replay_dma_chan, void *host)
 {
-	dma_addr_t cb = prepare_cb(FROM_DEV);
+	dma_addr_t cb = prepare_cb(FROM_DEV, count);
 	req_read(host, SDEDM, 0x00010801);
 	req_read(host, SDCMD, 0x00000052);
 	req_read(host, SDHSTS, 0x00000000);
@@ -51,4 +51,7 @@ static void rd_8(int sec, void *replay_dma_chan, void *host)
 	reply_write(host, SDHCFG, 0x0000040e);
 	reply_read(host, SDEDM, 0x00010804);
 	reply_write(host, SDEDM, 0x00090804);
+}
+static void rd_8(int sec, void *replay_dma_chan, void *host) {
+	rd_template(sec, 8, replay_dma_chan, host);
 }

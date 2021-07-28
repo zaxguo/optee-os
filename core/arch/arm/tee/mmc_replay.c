@@ -25,8 +25,8 @@ void replay_entry(struct replay_cb *cb) {
 	TEE_Time start, end;
 	tee_time_get_sys_time(&start);
 	for (; i < 10; i++) {
-		/*wr_8(0, dma, sdhost);*/
-		rd_8(0, dma, sdhost);
+		wr_256(0, dma, sdhost);
+		/*rd_8(0, dma, sdhost);*/
 	}
 	tee_time_get_sys_time(&end);
 	ms_diff = (end.seconds - start.seconds)*1000 + (end.millis - start.millis);
