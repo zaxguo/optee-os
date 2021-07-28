@@ -26,6 +26,10 @@
 /* enigma headers */
 #include <sm/enigma_smc.h>
 #include <tee/enigma.h>
+/* replay cb */
+#include "replay/replay_cb.h"
+/* device regs */
+#include <platform_config.h>
 
 #define SHM_CACHE_ATTRS	\
 	(uint32_t)(core_mmu_is_shm_cached() ?  OPTEE_SMC_SHM_CACHED : 0)
@@ -480,8 +484,7 @@ uint32_t __weak tee_entry_std(struct optee_msg_arg *arg, uint32_t num_params)
 	return __tee_entry_std(arg, num_params);
 }
 
-extern void replay_read_single_block(void *host, uint32_t val, uint32_t rw);
-extern void replay_irq(void *hostr);
+extern void replay_entry(struct replay_cb *host);
 
 uint32_t enigma_entry(uint32_t op, sector_t blk, uint32_t dev_id) {
 	int ret;
@@ -504,16 +507,15 @@ uint32_t enigma_entry(uint32_t op, sector_t blk, uint32_t dev_id) {
 			break;
 		case ENIGMA_LOOKUP_BTT:
 			{
-			void *sdhost = phys_to_virt_io(0x3f202000);
-			#define SDEDM 0x34
-			uint32_t val = *(uint32_t *)(sdhost + SDEDM);
-			EMSG("reading EDM reg = %08x\n", val);
-			/* lwg: polling */
-			replay_read_single_block(sdhost, 0, 0);
-			replay_irq(sdhost);
-			/*thread_set_foreign_intr(true);*/
-			EMSG("replay finished..\n");
-			break;
+				struct replay_cb *cb = malloc(sizeof(struct replay_cb));
+				cb->dma_base = phys_to_virt_io(DMA_BASE);
+				cb->dma_base += (8 << 8);
+				cb->sdhost_base  = phys_to_virt_io(SDHOST_BASE);
+				replay_entry(cb);
+				/* lwg: polling */
+				/*thread_set_foreign_intr(true);*/
+				EMSG("replay finished..\n");
+				break;
 			}
 			pblk = get_blk_ref(blk);
 			break;

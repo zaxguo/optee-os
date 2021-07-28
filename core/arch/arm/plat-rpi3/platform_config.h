@@ -45,8 +45,14 @@
 #define CONSOLE_BAUDRATE	115200
 #define CONSOLE_UART_CLK_IN_HZ	19200000
 
+/* bus addr is 7e202000 */
 #define SDHOST_BASE 0x3f202000
 #define SDHOST_REG_SIZE 0x100
+
+/* bus addres is 7e007000 */
+#define DMA_BASE	0x3f007000
+/* 0-14 channels */
+#define DMA_SIZE	(15 << 8)
 
 #define IRQ_BASE 0x3f00b200
 #define IRQ_REG_SIZE  0x200

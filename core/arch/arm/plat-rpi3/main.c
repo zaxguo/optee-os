@@ -45,6 +45,10 @@ register_phys_mem_pgdir(MEM_AREA_IO_NSEC,
 /* setup sdhost reg */
 register_phys_mem_pgdir(MEM_AREA_IO_NSEC,
 			SDHOST_BASE, SDHOST_REG_SIZE);
+
+register_phys_mem_pgdir(MEM_AREA_IO_NSEC,
+			DMA_BASE, DMA_SIZE);
+
 /* irq chip */
 register_phys_mem_pgdir(MEM_AREA_IO_NSEC,
 			IRQ_BASE, IRQ_REG_SIZE);

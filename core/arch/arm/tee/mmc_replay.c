@@ -6,53 +6,35 @@
 #include <mm/core_memprot.h>
 #include <mm/core_mmu.h>
 #include <io.h>
-
-typedef uint32_t u32;
-
-#define SDCMD  0x00 /* Command to SD card              - 16 R/W */
-#define SDARG  0x04 /* Argument to SD card             - 32 R/W */
-#define SDTOUT 0x08 /* Start value for timeout counter - 32 R/W */
-#define SDCDIV 0x0c /* Start value for clock divider   - 11 R/W */
-#define SDRSP0 0x10 /* SD card response (31:0)         - 32 R   */
-#define SDRSP1 0x14 /* SD card response (63:32)        - 32 R   */
-#define SDRSP2 0x18 /* SD card response (95:64)        - 32 R   */
-#define SDRSP3 0x1c /* SD card response (127:96)       - 32 R   */
-#define SDHSTS 0x20 /* SD host status                  - 11 R   */
-#define SDVDD  0x30 /* SD card power control           -  1 R/W */
-#define SDEDM  0x34 /* Emergency Debug Mode            - 13 R/W */
-#define SDHCFG 0x38 /* Host configuration              -  2 R/W */
-#define SDHBCT 0x3c /* Host byte count (debug)         - 32 R/W */
-#define SDDATA 0x40 /* Data to/from SD card            - 32 R/W */
-#define SDHBLC 0x50 /* Host block count (SDIO/SDHC)    -  9 R/W */
-
-#define SDCMD_NEW_FLAG                  0x8000
-#define SDCMD_FAIL_FLAG                 0x4000
-#define SDCMD_BUSYWAIT                  0x800
-#define SDCMD_NO_RESPONSE               0x400
-#define SDCMD_LONG_RESPONSE             0x200
-#define SDCMD_WRITE_CMD                 0x80
-#define SDCMD_READ_CMD                  0x40
-#define SDCMD_CMD_MASK                  0x3f
-
-#define SDCDIV_MAX_CDIV                 0x7ff
-
-#define SDHSTS_BUSY_IRPT                0x400
-#define SDHSTS_BLOCK_IRPT               0x200
-#define SDHSTS_SDIO_IRPT                0x100
-#define SDHSTS_REW_TIME_OUT             0x80
-#define SDHSTS_CMD_TIME_OUT             0x40
-#define SDHSTS_CRC16_ERROR              0x20
-#define SDHSTS_CRC7_ERROR               0x10
-#define SDHSTS_FIFO_ERROR               0x08
-/* Reserved */
-/* Reserved */
-#define SDHSTS_DATA_FLAG                0x01
+#include <kernel/tee_time.h>
 
 #define CHECK_DIVERGENCE() \
 	if (val != expected) { \
 		DMSG("%d:not as expected (val = %08x, expected = %08x)...divergence!\n", __LINE__, val, expected); \
 	}\
 
+#include "replay/wr_8.h"
+#include "replay/rd_8.h"
+#include "replay/replay_cb.h"
+
+void replay_entry(struct replay_cb *cb) {
+	void *sdhost = cb->sdhost_base;
+	void *dma	 = cb->dma_base;
+	int i = 0;
+	int ms_diff;
+	TEE_Time start, end;
+	tee_time_get_sys_time(&start);
+	for (; i < 10; i++) {
+		/*wr_8(0, dma, sdhost);*/
+		rd_8(0, dma, sdhost);
+	}
+	tee_time_get_sys_time(&end);
+	ms_diff = (end.seconds - start.seconds)*1000 + (end.millis - start.millis);
+	EMSG("replaying: %d KB, time = %d ms, tput = %d KB/s...\n",
+			i * 4, ms_diff, (i*4)*1000/ms_diff);
+}
+
+#if 0
 static inline u32 bcm2835_sdhost_read(void *host, u32 val) {
 	return *(u32 *)(host + val);
 }
@@ -180,3 +162,4 @@ void itr_core_handler(void) {
 	replay_irq(host);
 
 }
+#endif
