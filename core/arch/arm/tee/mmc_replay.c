@@ -55,14 +55,14 @@ static void _bio(int rw, int sec, int cnt) {
 
 /* simple strategy to issue the actual bio */
 void bio(int rw, int sec, int cnt) {
-	/* directly match */
-	EMSG("%s, %d, %d\n", (rw == READ) ? "READ" : "WRITE", sec, cnt);
+	printk("%s, %d, %d\n", (rw == READ) ? "READ" : "WRITE", sec, cnt);
 	/* transform the block ID to be 3-word aligned */
 	if (sec & ((1 << 3) - 1)) {
 		int old_sec = sec;
 		sec = (sec >> 3) << 3;
-		EMSG("adjust...%d => %d\n", old_sec, sec);
+		printk("adjust...%d => %d\n", old_sec, sec);
 	}
+	/* directly match */
 	if (cnt == 1 || cnt == 8 || cnt == 32 || cnt == 256) {
 		_bio(rw, sec, cnt);
 		return;

@@ -2,7 +2,7 @@
 
 static void rd_template(int sec, int count, void *replay_dma_chan, void *host)
 {
-	EMSG("read[%d:%d]\n", sec, count);
+	printk("read[%d:%d]\n", sec, count);
 	u32 **cbs, **pgs;
 	dma_addr_t cb = prepare_cb(FROM_DEV, count, &cbs, &pgs);
 	req_read(host, SDEDM, 0x00010801);

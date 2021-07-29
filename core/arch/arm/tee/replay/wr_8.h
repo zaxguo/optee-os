@@ -1,7 +1,7 @@
 #include "common.h"
 
 static void wr_template(int addr, int count, void *replay_dma_chan, void *host) {
-	EMSG("write[%d:%d]\n", addr, count);
+	printk("write[%d:%d]\n", addr, count);
 	u32 **cbs, **pgs;
 	if (replay_dma_chan == NULL || host == NULL) {
 		EMSG("dma: %p or host: %p, invalid!\n", replay_dma_chan, host);

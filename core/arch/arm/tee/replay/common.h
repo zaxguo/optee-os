@@ -48,15 +48,16 @@ typedef u32 dma_addr_t;
 
 static __always_inline void req_read(void *base, int off, u32 expected) {
 	u32 val = readl(base + off);
-	if (val != expected)
-		EMSG("reading [%08x%s%08x]:[%p:%x] (%d)\n", val, (val == expected) ? "==" : "!=", expected, base, off, __LINE__);
+	if (expected != IGNORE_VAL && val != expected) {
+		//EMSG("reading [%08x%s%08x]:[%p:%x] (%d)\n", val, (val == expected) ? "==" : "!=", expected, base, off, __LINE__);
+	}
 }
 
 static __always_inline void reply_read(void *base, int off, u32 expected) {
 	u32 val = readl(base + off);
-	if (val != expected)
-		EMSG("reading [%08x%s%08x]:[%p:%x] (%d)\n", val, (val == expected) ? "==" : "!=", expected, base, off, __LINE__);
-
+	if (expected != IGNORE_VAL && val != expected) {
+		//EMSG("reading [%08x%s%08x]:[%p:%x] (%d)\n", val, (val == expected) ? "==" : "!=", expected, base, off, __LINE__);
+	}
 }
 
 static inline void req_write(void *base, int off, u32 val) {
@@ -108,8 +109,7 @@ static void *alloc(int size, int alignment) {
 }
 
 static void dump_cb(u32 *cb) {
-	EMSG("cb[00]:%08x %08x %08x %08x", *cb, *(cb + 1), *(cb + 2), *(cb + 3));
-	EMSG("cb[04]:%08x %08x %08x %08x", *(cb + 4), *(cb + 5), *(cb + 6), *(cb + 7));
+	EMSG("cb[%08x]:%08x %08x %08x %08x %08x %08x %08x %08x", virt_to_phys(cb),*cb, *(cb + 1), *(cb + 2), *(cb + 3), *(cb + 4), *(cb + 5), *(cb + 6), *(cb + 7));
 }
 
 
@@ -185,10 +185,10 @@ static dma_addr_t prepare_cb(int dir, int count, u32 ***cbs, u32 ***pgs) {
 		//DHEXDUMP(cb, 32);
 		//dump_cb(cb);
 		cache_operation(TEE_CACHEINVALIDATE, cb, 128);
+		cache_operation(TEE_CACHEINVALIDATE, data, 4096);
 		if (i == 0) {
 			ret = virt_to_phys(cb) - DMA_OFF;
 		}
-		//cache_operation(TEE_CACHEINVALIDATE, data, 4096);
 	}
 	return ret;
 }
