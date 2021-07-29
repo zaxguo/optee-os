@@ -16,6 +16,74 @@
 #include "replay/wr_8.h"
 #include "replay/rd_8.h"
 #include "replay/replay_cb.h"
+#include "replay/block.h"
+#include "replay/select3.h"
+
+struct replay_cb *replay_cb;
+
+
+static void _bio(int rw, int sec, int cnt) {
+	switch (cnt) {
+	case 1:
+	case 8:
+		if (rw == READ) {
+			rd_8(sec, replay_cb->dma_base, replay_cb->sdhost_base);
+		} else {
+			wr_8(sec, replay_cb->dma_base, replay_cb->sdhost_base);
+		}
+		break;
+	case 32:
+		if (rw == READ) {
+			rd_32(sec, replay_cb->dma_base, replay_cb->sdhost_base);
+		} else {
+			wr_32(sec, replay_cb->dma_base, replay_cb->sdhost_base);
+		}
+		break;
+	case 256:
+		if (rw == READ) {
+			rd_256(sec, replay_cb->dma_base, replay_cb->sdhost_base);
+		} else {
+			wr_256(sec, replay_cb->dma_base, replay_cb->sdhost_base);
+		}
+		break;
+	default:
+		EMSG("Unrecorded bio size!!!!! Abort!\n");
+		while(1);
+		break;
+	}
+}
+
+/* simple strategy to issue the actual bio */
+void bio(int rw, int sec, int cnt) {
+	/* directly match */
+	EMSG("%s, %d, %d\n", (rw == READ) ? "READ" : "WRITE", sec, cnt);
+	/* transform the block ID to be 3-word aligned */
+	if (sec & ((1 << 3) - 1)) {
+		int old_sec = sec;
+		sec = (sec >> 3) << 3;
+		EMSG("adjust...%d => %d\n", old_sec, sec);
+	}
+	if (cnt == 1 || cnt == 8 || cnt == 32 || cnt == 256) {
+		_bio(rw, sec, cnt);
+		return;
+	}
+	/* greater than rw 100 sectors all go to 256
+	 * Check: we dont have over 256 sector access */
+	if (cnt > 100) {
+		_bio(rw, sec, 256);
+	/* fit using 32 */
+	} else if (cnt > 8 && cnt < 100) {
+		/* how many 32-sector read we need? */
+		int need = (cnt - 1)/32 + 1;
+		int i;
+		for (i = 0; i < need; i++) {
+			_bio(rw, sec + i * 32, 32);
+		}
+	} else if (cnt < 8) {
+		_bio(rw, sec, 8);
+	}
+	return;
+}
 
 void replay_entry(struct replay_cb *cb) {
 	void *sdhost = cb->sdhost_base;
@@ -23,143 +91,18 @@ void replay_entry(struct replay_cb *cb) {
 	int i = 0;
 	int ms_diff;
 	TEE_Time start, end;
+	replay_cb = cb;
 	tee_time_get_sys_time(&start);
+	select3();
+#if 0
+	/* simple throughput test */
 	for (; i < 10; i++) {
-		wr_256(0, dma, sdhost);
+		/*wr_256(0, dma, sdhost);*/
 		/*rd_8(0, dma, sdhost);*/
 	}
+#endif
 	tee_time_get_sys_time(&end);
 	ms_diff = (end.seconds - start.seconds)*1000 + (end.millis - start.millis);
 	EMSG("replaying: %d KB, time = %d ms, tput = %d KB/s...\n",
 			i * 4, ms_diff, (i*4)*1000/ms_diff);
 }
-
-#if 0
-static inline u32 bcm2835_sdhost_read(void *host, u32 val) {
-	return *(u32 *)(host + val);
-}
-
-static inline void bcm2835_sdhost_write(void *host, u32 val, u32 reg) {
-	*(u32 *)(host + reg) = val;
-}
-
-void replay_read_single_block(void *host, u32 block, int rw) {
-	u32 expected, val;
-
-	expected = 0x00010801;
-	val= bcm2835_sdhost_read(host, SDEDM);
-	CHECK_DIVERGENCE();
-
-	expected = 0x0000000d;
-	val = bcm2835_sdhost_read(host, SDCMD);
-	CHECK_DIVERGENCE();
-
-	expected = 0x00000000;
-	val = bcm2835_sdhost_read(host, SDHSTS);
-	CHECK_DIVERGENCE();
-
-	val = 0x0000041e;
-	bcm2835_sdhost_write(host, val, SDHCFG);
-
-	val = 0x00000200;
-	bcm2835_sdhost_write(host, val, SDHBCT);
-
-	val = 0x00000001;
-	bcm2835_sdhost_write(host, val, SDHBLC);
-
-	val = 0x00000800;
-	bcm2835_sdhost_write(host, val, SDARG);
-
-	if (rw == 0) {
-		val = 0x00008051;
-		expected = 0x00008051;
-	} else {
-		val = 0x00008098;
-		expected = val;
-	}
-	bcm2835_sdhost_write(host, val, SDCMD);
-
-	val = bcm2835_sdhost_read(host, SDCMD);
-	CHECK_DIVERGENCE();
-
-	if (rw == 0) {
-		expected = 0x00008051;
-	} else {
-		expected = 0x00008098;
-	}
-	val = bcm2835_sdhost_read(host, SDCMD);
-	CHECK_DIVERGENCE();
-
-	expected = 0x00000900;
-	val = bcm2835_sdhost_read(host, SDRSP0);
-	CHECK_DIVERGENCE();
-	return;
-}
-
-void replay_irq(void *host) {
-	u32 val, expected, word, i, j;
-
-	while((bcm2835_sdhost_read(host, SDHSTS) & SDHSTS_DATA_FLAG) != 0x1) {
-		DMSG("polling..\n");
-	}
-
-	expected = 0x0000001;
-	val = bcm2835_sdhost_read(host, SDHSTS);
-	CHECK_DIVERGENCE();
-
-	val = 0x00000701;
-	bcm2835_sdhost_write(host, val, SDHSTS);
-
-	word = 16;
-	i = 0;
-	while(i < 128/word) {
-		j = 0;
-		expected = 0x00010902;
-		val = bcm2835_sdhost_read(host, SDEDM);
-		CHECK_DIVERGENCE();
-		while (j < word) {
-			val = bcm2835_sdhost_read(host, SDDATA);
-			DMSG("reading %08x...\n", val);
-			j++;
-		}
-		i++;
-	}
-	expected = 0x00000000;
-	val = bcm2835_sdhost_read(host, SDHSTS);
-	CHECK_DIVERGENCE();
-
-	val = 0x0000040e;
-	bcm2835_sdhost_write(host, val, SDHCFG);
-
-	expected = 0x00010801;
-	val = bcm2835_sdhost_read(host, SDEDM);
-	CHECK_DIVERGENCE();
-
-	expected = 0x00000000;
-	val = bcm2835_sdhost_read(host, SDHSTS);
-	CHECK_DIVERGENCE();
-}
-
-
-void itr_core_handler(void) {
-	uint32_t val;
-	DMSG("handling irq by replaying...\n");
-	void *irq_base = phys_to_virt_io(0x3f00b200);
-	void *local_irq_base = phys_to_virt_io(0x40000000);
-	void *host = phys_to_virt_io(0x3f202000);
-	val = io_read32(irq_base);
-	DMSG("pend 0 = %08x\n", val);
-	val = io_read32(irq_base + 0x4);
-	DMSG("pend 1 = %08x\n", val);
-	val = io_read32(irq_base + 0x8);
-	DMSG("pend 2 = %08x\n", val);
-
-	thread_mask_exceptions(THREAD_EXCP_FOREIGN_INTR);
-	int cpu = get_core_pos();
-	val = io_read32(local_irq_base + 0xc + 4 * cpu);
-	DMSG("pending bit = %08x...\n", val);
-
-	replay_irq(host);
-
-}
-#endif

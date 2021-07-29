@@ -1,11 +1,13 @@
 #include "common.h"
 
 static void wr_template(int addr, int count, void *replay_dma_chan, void *host) {
+	EMSG("write[%d:%d]\n", addr, count);
+	u32 **cbs, **pgs;
 	if (replay_dma_chan == NULL || host == NULL) {
 		EMSG("dma: %p or host: %p, invalid!\n", replay_dma_chan, host);
 		return;
 	}
-	dma_addr_t cb = prepare_cb(TO_DEV, count);
+	dma_addr_t cb = prepare_cb(TO_DEV, count, &cbs, &pgs);
 	req_read(host, SDEDM, 0x00010801);
 	req_read(host, SDCMD, 0x0000000d);
 	req_read(host, SDHSTS, 0x00000000);
@@ -40,6 +42,9 @@ static void wr_template(int addr, int count, void *replay_dma_chan, void *host) 
 	}
 	reply_read(host, SDCMD, 0x00000099);
 	if (count > 8) {
+		reply_read(host, SDEDM, 0x00010807);
+		/* again?? */
+		reply_read(host, SDEDM, 0x00010807);
 		reply_read(host, SDEDM, 0x00010807);
 	} else {
 		reply_read(host, SDEDM, 0x00010801);
@@ -77,10 +82,16 @@ static void wr_template(int addr, int count, void *replay_dma_chan, void *host) 
 	// summarize
 	while(readl(host + SDCMD) != 0x0000000d);
 	req_read(host, SDRSP0, 0x00000900);
+
+	cleanup_mem(count, cbs, pgs);
 }
 
 static void wr_256(int sec, void *replay_dma_chan, void *host) {
 	wr_template(sec, 256, replay_dma_chan, host);
+}
+
+static void wr_32(int sec, void *replay_dma_chan, void *host) {
+	wr_template(sec, 32, replay_dma_chan, host);
 }
 
 static void wr_8(int sec, void *replay_dma_chan, void *host) {

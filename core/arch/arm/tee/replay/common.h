@@ -43,17 +43,19 @@ typedef u32 dma_addr_t;
 #define writel(val, c) ({ dsb(); io_write32(c, val); })
 #define cpu_relax()  __asm__ __volatile__("": : :"memory")
 
-#define printk EMSG
-//#define printk(...) (void)(0);
+//#define printk EMSG
+#define printk(...) (void)(0);
 
 static __always_inline void req_read(void *base, int off, u32 expected) {
 	u32 val = readl(base + off);
-	printk("reading [%08x%s%08x]:[%p:%x] (%d)\n", val, (val == expected) ? "==" : "!=", expected, base, off, __LINE__);
+	if (val != expected)
+		EMSG("reading [%08x%s%08x]:[%p:%x] (%d)\n", val, (val == expected) ? "==" : "!=", expected, base, off, __LINE__);
 }
 
 static __always_inline void reply_read(void *base, int off, u32 expected) {
 	u32 val = readl(base + off);
-	printk("reading [%08x%s%08x]:[%p:%x] (%d)\n", val, (val == expected) ? "==" : "!=", expected, base, off, __LINE__);
+	if (val != expected)
+		EMSG("reading [%08x%s%08x]:[%p:%x] (%d)\n", val, (val == expected) ? "==" : "!=", expected, base, off, __LINE__);
 
 }
 
@@ -89,7 +91,7 @@ static void* align(void *old, int bits) {
 static void *alloc_aligned(int size, int alignment) {
 	u32 *ret = malloc(size + (1 << alignment) + sizeof(u32 *));
 	if (!ret) {
-		printk("lwg:%s:%d: cannot get mem of %d bytes!!!\n", __func__, __LINE__, size);
+		EMSG("lwg:%s:%d: cannot get mem of %d bytes!!!\n", __func__, __LINE__, size);
 		return 0;
 	}
 	if ((u32)ret & ((1 << alignment) - 1)) {
@@ -99,23 +101,44 @@ static void *alloc_aligned(int size, int alignment) {
 	return ret;
 }
 
+static void *alloc(int size, int alignment) {
+	u32 alloc_size = size + (1 << alignment) + sizeof(u32 *);
+	u32 *ret = malloc(alloc_size);
+	return ret;
+}
+
 static void dump_cb(u32 *cb) {
 	EMSG("cb[00]:%08x %08x %08x %08x", *cb, *(cb + 1), *(cb + 2), *(cb + 3));
 	EMSG("cb[04]:%08x %08x %08x %08x", *(cb + 4), *(cb + 5), *(cb + 6), *(cb + 7));
 }
 
-static dma_addr_t prepare_cb(int dir, int count) {
+
+static void cleanup_mem(int count, u32 **cbs, u32 **pgs) {
+	u32 i = 0;
+	u32 n = (count - 1)/8 + 1;
+	u32 **cb_list, **pg_list;
+	cb_list = cbs;
+	pg_list = pgs;
+	for (i = 0; i < n; i++) {
+		free(cb_list[i]);
+		free(pg_list[i]);
+	}
+}
+
+static dma_addr_t prepare_cb(int dir, int count, u32 ***cbs, u32 ***pgs) {
 	u32 i = 0;
 	u32 alignment = 8;
 	u32 n_cb = (count - 1)/8 + 1;
 	u32 **cb_list = malloc(n_cb * sizeof(u32*));
 	u32 **pg_list = malloc(n_cb * sizeof(u32*));
+	*cbs  = cb_list;
+	*pgs  = pg_list;
+	dma_addr_t ret;
 	for (i = 0; i < n_cb; i++) {
-		u32 *cb = alloc_aligned(128, alignment);
-		u32 *pg = alloc_aligned(4096, alignment);
-		memset(cb, 0, 128);
-		/* XXX:generated data */
-		memset(pg, i, 4096);
+		u32 *cb = alloc(128, alignment);
+		u32 *pg = alloc(4096, alignment);
+		//u32 *cb = alloc_aligned(128, alignment);
+		//u32 *pg = alloc_aligned(4096, alignment);
 		*(cb_list + i) = cb;
 		*(pg_list + i) = pg;
 		printk("cb @ %p:%08x\n", cb, virt_to_phys(cb));
@@ -124,6 +147,11 @@ static dma_addr_t prepare_cb(int dir, int count) {
 	for (i = 0; i < n_cb; i++) {
 		u32 *cb = cb_list[i];
 		u32 *data = pg_list[i];
+		cb = align(cb, alignment);
+		data = align(data, alignment);
+		memset(cb, 0, 128);
+		/* XXX:generated data */
+		memset(data, i, 4096);
 		if (dir == TO_DEV) {
 			/* src */
 			*cb = 0x000d0148;
@@ -141,25 +169,28 @@ static dma_addr_t prepare_cb(int dir, int count) {
 		*(cb + 3) = 0x00001000;
 		/* next cb */
 		if (i < (n_cb - 1)) {
-			*(cb + 5) = virt_to_phys(cb_list[i + 1]) - DMA_OFF;
+			u32 *next = cb_list[i + 1];
+			next = align(next, alignment);
+			*(cb + 5) = virt_to_phys(next) - DMA_OFF;
 		}
 		/* last chained cb */
 		if (i == (n_cb - 1)) {
 			/* flip active bit */
-			*cb = 0x000d0419;
+			*cb |= 0x1;
 			/* read due to silicon bug */
 			if (dir == FROM_DEV)
 				*(cb + 3) = 0x00000ff4;
 			*(cb + 5) = 0x0;
 		}
-		/*print_hex_dump(KERN_WARNING, "cb:", DUMP_PREFIX_OFFSET, 16, 4, cb, 32, 0);*/
-		//__flush_dcache_area(cb, 32);
 		//DHEXDUMP(cb, 32);
-		dump_cb(cb);
+		//dump_cb(cb);
 		cache_operation(TEE_CACHEINVALIDATE, cb, 128);
+		if (i == 0) {
+			ret = virt_to_phys(cb) - DMA_OFF;
+		}
 		//cache_operation(TEE_CACHEINVALIDATE, data, 4096);
 	}
-	return virt_to_phys(cb_list[0]) - DMA_OFF;
+	return ret;
 }
 
 
