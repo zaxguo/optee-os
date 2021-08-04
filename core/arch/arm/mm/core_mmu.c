@@ -662,6 +662,7 @@ uint32_t core_mmu_type_to_attr(enum teecore_memtypes t)
 	case MEM_AREA_NEX_RAM_RW:
 	case MEM_AREA_TEE_ASAN:
 		return attr | TEE_MATTR_SECURE | TEE_MATTR_PRW | cached;
+	/* lwg: configure this somehow:XXX */
 	case MEM_AREA_TEE_COHERENT:
 		return attr | TEE_MATTR_SECURE | TEE_MATTR_PRWX | noncache;
 	case MEM_AREA_TA_RAM:

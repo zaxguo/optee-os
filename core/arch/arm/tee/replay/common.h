@@ -119,7 +119,16 @@ static void cleanup_mem(int count, u32 **cbs, u32 **pgs) {
 	u32 **cb_list, **pg_list;
 	cb_list = cbs;
 	pg_list = pgs;
+	cache_operation(TEE_CACHEINVALIDATE, pg_list[i], 4096);
 	for (i = 0; i < n; i++) {
+#if 0
+		/* verify data */
+		if (i == 0 || i == 20 || i == 31) {
+			u32 *data = pg_list[i];
+			data = align(data, 8);
+			EMSG("[%d] data = %08x %08x %08x %08x\n", i, *data, *(data + 1), *(data + 2), *(data + 3));
+		}
+#endif
 		free(cb_list[i]);
 		free(pg_list[i]);
 	}
@@ -150,8 +159,12 @@ static dma_addr_t prepare_cb(int dir, int count, u32 ***cbs, u32 ***pgs) {
 		cb = align(cb, alignment);
 		data = align(data, alignment);
 		memset(cb, 0, 128);
-		/* XXX:generated data */
-		memset(data, i, 4096);
+		/* XXX:generated data for write */
+		if (dir == TO_DEV) {
+			memset(data, i, 4096);
+		} else {
+			memset(data, 0, 4096);
+		}
 		if (dir == TO_DEV) {
 			/* src */
 			*cb = 0x000d0148;

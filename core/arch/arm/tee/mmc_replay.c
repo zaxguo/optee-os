@@ -18,6 +18,8 @@
 #include "replay/replay_cb.h"
 #include "replay/block.h"
 #include "replay/select3.h"
+#include "replay/insert3.h"
+#include "replay/selectG.h"
 
 struct replay_cb *replay_cb;
 
@@ -93,11 +95,15 @@ void replay_entry(struct replay_cb *cb) {
 	TEE_Time start, end;
 	replay_cb = cb;
 	tee_time_get_sys_time(&start);
-	select3();
-#if 0
+	/* application benchmark */
+	//select3();
+	//selectG();
+	//insert3();
+#if 1
 	/* simple throughput test */
-	for (; i < 10; i++) {
-		/*wr_256(0, dma, sdhost);*/
+	for (; i < 100; i++) {
+		rd_256(0, dma, sdhost);
+		/*wr_8(0, dma, sdhost);*/
 		/*rd_8(0, dma, sdhost);*/
 	}
 #endif

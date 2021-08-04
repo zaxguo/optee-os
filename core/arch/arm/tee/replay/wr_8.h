@@ -34,7 +34,7 @@ static void wr_template(int addr, int count, void *replay_dma_chan, void *host) 
 	/* ack */
 	reply_write(replay_dma_chan, BCM2835_DMA_CS, 0x00000004);
 	printk("%d:ack ... (debug = %08x, src = %08x)\n", __LINE__, readl(replay_dma_chan + BCM2835_DMA_DEBUG), readl(replay_dma_chan + BCM2835_DMA_SOURCE_AD));
-	/* > 8 sectors will busy flag will be on */
+	/* > 8 sectors busy flag will be on */
 	if (count > 8) {
 		reply_read(host, SDHSTS, 0x00000001);
 	} else {
