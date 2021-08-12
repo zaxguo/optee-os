@@ -96,12 +96,12 @@ void replay_entry(struct replay_cb *cb) {
 	replay_cb = cb;
 	tee_time_get_sys_time(&start);
 	/* application benchmark */
-	//select3();
+	/*select3();*/
 	//selectG();
 	//insert3();
-#if 1
 	/* simple throughput test */
-	for (; i < 100; i++) {
+#if 1
+	for (; i < 1; i++) {
 		rd_256(0, dma, sdhost);
 		/*wr_8(0, dma, sdhost);*/
 		/*rd_8(0, dma, sdhost);*/

@@ -28,6 +28,7 @@
 #include <tee/enigma.h>
 /* replay cb */
 #include "replay/replay_cb.h"
+#include "replay/rd_8.h"
 /* device regs */
 #include <platform_config.h>
 
@@ -500,6 +501,11 @@ uint32_t enigma_entry(uint32_t op, sector_t blk, uint32_t dev_id) {
 		case ENIGMA_RD:
 			/* TODO: we donot have encryption yet */
 			pblk = (blk == NULL_BLK) ? 0 : blk;
+#if 0
+			if (pblk != 0 && g_replay_cb) {
+				rd_8(pblk & (~7), g_replay_cb->dma_base, g_replay_cb->sdhost_base);
+			}
+#endif
 			break;
 		case ENIGMA_INCR:
 			ret = inc_blk_ref(blk);
@@ -509,11 +515,10 @@ uint32_t enigma_entry(uint32_t op, sector_t blk, uint32_t dev_id) {
 			{
 				struct replay_cb *cb = malloc(sizeof(struct replay_cb));
 				cb->dma_base = phys_to_virt_io(DMA_BASE);
+				/* 8th channel */
 				cb->dma_base += (8 << 8);
 				cb->sdhost_base  = phys_to_virt_io(SDHOST_BASE);
 				replay_entry(cb);
-				/* lwg: polling */
-				/*thread_set_foreign_intr(true);*/
 				EMSG("replay finished..\n");
 				break;
 			}

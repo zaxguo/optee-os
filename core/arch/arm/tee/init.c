@@ -15,12 +15,13 @@
 #include <tee/tee_fs.h>
 #include <tee/tee_svc.h>
 #include <trace.h>
-
 #include <platform_config.h>
 #include <tee/enigma.h>
-
+#include "replay/replay_cb.h"
 
 #define TEE_MON_MAX_NUM_ARGS    8
+
+struct replay_cb *g_replay_cb;
 
 static void call_initcalls(void)
 {
@@ -73,6 +74,13 @@ TEE_Result __weak init_teecore(void)
 
 	/* enigma init */
 	init_enigma_cb();
+	struct replay_cb *cb = malloc(sizeof(struct replay_cb));
+	cb->dma_base = phys_to_virt_io(DMA_BASE);
+	/* 8th channel */
+	cb->dma_base += (8 << 8);
+	cb->sdhost_base  = phys_to_virt_io(SDHOST_BASE);
+	g_replay_cb = cb;
+	EMSG("mmc replay control block init done!\n");
 
 	IMSG("Initialized");
 	return TEE_SUCCESS;

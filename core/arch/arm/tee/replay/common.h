@@ -61,12 +61,12 @@ static __always_inline void reply_read(void *base, int off, u32 expected) {
 }
 
 static inline void req_write(void *base, int off, u32 val) {
-	printk("writing [%08x,%p:%x]\n", val, base, off);
+	//printk("writing [%08x,%p:%x]\n", val, base, off);
 	writel(val, base + off);
 }
 
 static inline void reply_write(void *base, int off, u32 val) {
-	printk("writing [%08x,%p:%x]\n", val, base, off);
+	//printk("writing [%08x,%p:%x]\n", val, base, off);
 	writel(val, base + off);
 }
 

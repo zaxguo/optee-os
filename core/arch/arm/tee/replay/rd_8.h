@@ -3,6 +3,7 @@
 static void rd_template(int sec, int count, void *replay_dma_chan, void *host)
 {
 	printk("read[%d:%d]\n", sec, count);
+	EMSG("read[%d:%d]\n", sec, count);
 	u32 **cbs, **pgs;
 	dma_addr_t cb = prepare_cb(FROM_DEV, count, &cbs, &pgs);
 	req_read(host, SDEDM, 0x00010801);
@@ -21,7 +22,7 @@ static void rd_template(int sec, int count, void *replay_dma_chan, void *host)
 		udelay(10);
 		val = readl(host + SDCMD);
 		cpu_relax();
-		//EMSG("poll val = %08x\n", val);
+		//EMSG("poll val = %08x [%d]\n", val, __LINE__);
 	} while ((val & 0x8000));
 	//poll(host, SDCMD, 0x00000017);
 
@@ -45,7 +46,7 @@ static void rd_template(int sec, int count, void *replay_dma_chan, void *host)
 		udelay(10);
 		val = readl(host + SDCMD);
 		cpu_relax();
-		//EMSG("poll val = %08x\n", val);
+		//EMSG("poll val = %08x [%d]\n", val, __LINE__);
 	} while ((val & 0x8000));
 	req_read(host, SDCMD, 0x00000052);
 	req_read(host, SDRSP0, 0x00000900);
@@ -53,7 +54,7 @@ static void rd_template(int sec, int count, void *replay_dma_chan, void *host)
 	do {
 		val = readl(replay_dma_chan + BCM2835_DMA_CS);
 		cpu_relax();
-		//EMSG("poll val = %08x\n", val);
+		//EMSG("poll val = %08x [%d]\n", val, __LINE__);
 	} while((val &= 0x00000004) == 0);
 	reply_write(replay_dma_chan, BCM2835_DMA_CS, 0x00000004);
 	reply_read(host, SDHSTS, 0x00000001);

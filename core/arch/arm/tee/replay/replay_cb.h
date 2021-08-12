@@ -4,4 +4,6 @@ struct replay_cb {
 	void *dma_base;
 	void *sdhost_base;
 };
+
+extern struct replay_cb *g_replay_cb;
 #endif
