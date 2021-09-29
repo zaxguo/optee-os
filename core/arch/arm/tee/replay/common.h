@@ -27,6 +27,42 @@
 #define SDDATA 0x40 /* Data to/from SD card            - 32 R/W */
 #define SDHBLC 0x50 /* Host block count (SDIO/SDHC)    -  9 R/W */
 
+#define SDEDM_FORCE_DATA_MODE   (1<<19)
+#define SDEDM_CLOCK_PULSE       (1<<20)
+#define SDEDM_BYPASS            (1<<21)
+
+#define SDEDM_WRITE_THRESHOLD_SHIFT 9
+#define SDEDM_READ_THRESHOLD_SHIFT 14
+#define SDEDM_THRESHOLD_MASK     0x1f
+
+#define SDEDM_FSM_MASK           0xf
+#define SDEDM_FSM_IDENTMODE      0x0
+#define SDEDM_FSM_DATAMODE       0x1
+#define SDEDM_FSM_READDATA       0x2
+#define SDEDM_FSM_WRITEDATA      0x3
+#define SDEDM_FSM_READWAIT       0x4
+#define SDEDM_FSM_READCRC        0x5
+#define SDEDM_FSM_WRITECRC       0x6
+#define SDEDM_FSM_WRITEWAIT1     0x7
+#define SDEDM_FSM_POWERDOWN      0x8
+#define SDEDM_FSM_POWERUP        0x9
+#define SDEDM_FSM_WRITESTART1    0xa
+#define SDEDM_FSM_WRITESTART2    0xb
+#define SDEDM_FSM_GENPULSES      0xc
+#define SDEDM_FSM_WRITEWAIT2     0xd
+#define SDEDM_FSM_STARTPOWDOWN   0xf
+
+#define SDDATA_FIFO_WORDS        16
+
+#define FIFO_READ_THRESHOLD     4
+#define FIFO_WRITE_THRESHOLD    4
+#define ALLOW_CMD23_READ        1
+#define ALLOW_CMD23_WRITE       0
+#define ENABLE_LOG              1
+#define SDDATA_FIFO_PIO_BURST   8
+#define CMD_DALLY_US            1
+#define SDCDIV_MAX_CDIV                 0x7ff
+
 #define BCM2835_DMA_CS		0x00
 #define BCM2835_DMA_ADDR	0x04
 #define BCM2835_DMA_SOURCE_AD	0x0c
@@ -61,12 +97,12 @@ static __always_inline void reply_read(void *base, int off, u32 expected) {
 }
 
 static inline void req_write(void *base, int off, u32 val) {
-	//printk("writing [%08x,%p:%x]\n", val, base, off);
+	printk("writing [%08x,%p:%x]\n", val, base, off);
 	writel(val, base + off);
 }
 
 static inline void reply_write(void *base, int off, u32 val) {
-	//printk("writing [%08x,%p:%x]\n", val, base, off);
+	printk("writing [%08x,%p:%x]\n", val, base, off);
 	writel(val, base + off);
 }
 
@@ -206,6 +242,37 @@ static dma_addr_t prepare_cb(int dir, int count, u32 ***cbs, u32 ***pgs) {
 	return ret;
 }
 
+static inline void bcm2835_sdhost_write(void *base, int val, int off) {
+	writel(val, base + off);
+}
+
+static inline int bcm2835_sdhost_read(void *base, int off) {
+	return readl(base + off);
+}
+
+static void reset_sdhost(void *host) {
+	bcm2835_sdhost_write(host, 0, SDCMD);
+	bcm2835_sdhost_write(host, 0, SDARG);
+	bcm2835_sdhost_write(host, 0xf00000, SDTOUT);
+	bcm2835_sdhost_write(host, 0, SDCDIV);
+	bcm2835_sdhost_write(host, 0x7f8, SDHSTS); /* Write 1s to clear */
+	bcm2835_sdhost_write(host, 0, SDHCFG);
+	bcm2835_sdhost_write(host, 0, SDHBCT);
+	bcm2835_sdhost_write(host, 0, SDHBLC);
+
+	/* Limit fifo usage due to silicon bug */
+	int temp = bcm2835_sdhost_read(host, SDEDM);
+	temp &= ~((SDEDM_THRESHOLD_MASK<<SDEDM_READ_THRESHOLD_SHIFT) |
+		  (SDEDM_THRESHOLD_MASK<<SDEDM_WRITE_THRESHOLD_SHIFT));
+	temp |= (FIFO_READ_THRESHOLD << SDEDM_READ_THRESHOLD_SHIFT) |
+		(FIFO_WRITE_THRESHOLD << SDEDM_WRITE_THRESHOLD_SHIFT);
+	bcm2835_sdhost_write(host, temp, SDEDM);
+	mdelay(10);
+	//bcm2835_sdhost_set_power(host, true);
+	//mdelay(10);
+	//bcm2835_sdhost_write(host, host->hcfg, SDHCFG);
+	//bcm2835_sdhost_write(host, SDCDIV_MAX_CDIV, SDCDIV);
+}
 
 
 #endif

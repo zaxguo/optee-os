@@ -73,7 +73,7 @@ TEE_Result __weak init_teecore(void)
 
 
 	/* enigma init */
-	init_enigma_cb();
+	/*init_enigma_cb();*/
 	struct replay_cb *cb = malloc(sizeof(struct replay_cb));
 	cb->dma_base = phys_to_virt_io(DMA_BASE);
 	/* 8th channel */

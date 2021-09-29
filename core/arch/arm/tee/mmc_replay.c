@@ -20,6 +20,9 @@
 #include "replay/select3.h"
 #include "replay/insert3.h"
 #include "replay/selectG.h"
+#include "replay/delete.h"
+#include "replay/io.h"
+#include "replay/indexedby.h"
 
 struct replay_cb *replay_cb;
 
@@ -58,6 +61,7 @@ static void _bio(int rw, int sec, int cnt) {
 /* simple strategy to issue the actual bio */
 void bio(int rw, int sec, int cnt) {
 	printk("%s, %d, %d\n", (rw == READ) ? "READ" : "WRITE", sec, cnt);
+	/*reset_sdhost(replay_cb->sdhost_base);*/
 	/* transform the block ID to be 3-word aligned */
 	if (sec & ((1 << 3) - 1)) {
 		int old_sec = sec;
@@ -99,8 +103,11 @@ void replay_entry(struct replay_cb *cb) {
 	/*select3();*/
 	//selectG();
 	//insert3();
-	/* simple throughput test */
-#if 1
+	/*delete();*/
+	/*io();*/
+	indexedby();
+	/* micro */
+#if 0
 	for (; i < 1; i++) {
 		rd_256(0, dma, sdhost);
 		/*wr_8(0, dma, sdhost);*/
